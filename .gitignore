@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.tsbuildinfo
+.env
+server/data/uploads/
+server/data/uploads-deleted/
