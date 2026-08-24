@@ -18,9 +18,9 @@ const EMPTY_FORM = {
   name: "",
   description: "",
   specs: "",
-  price: 0,
+  price: "0",
   image_url: "",
-  stock: 0,
+  stock: "0",
   category_id: 0,
 };
 
@@ -72,9 +72,9 @@ function AdminPage() {
       name: p.name,
       description: p.description,
       specs: p.specs,
-      price: Math.round(p.price * 100) / 100,
+      price: String(Math.round(p.price * 100) / 100),
       image_url: p.image_url ?? "",
-      stock: p.stock,
+      stock: String(p.stock),
       category_id: p.category_id,
     });
     setEditingId(p.id);
@@ -94,7 +94,12 @@ function AdminPage() {
     setSaving(true);
     setFormError(null);
     try {
-      const input = { ...form, image_url: form.image_url.trim() || null };
+      const input = {
+        ...form,
+        image_url: form.image_url.trim() || null,
+        price: Number(form.price) || 0,
+        stock: Number(form.stock) || 0,
+      };
       if (editingId === "new") {
         await createProduct(input);
         setMessage("商品已新增");
@@ -288,7 +293,13 @@ function AdminPage() {
                   min="0"
                   step="0.01"
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+                  onFocus={() => {
+                    if (form.price === "0") setForm({ ...form, price: "" });
+                  }}
+                  onBlur={() => {
+                    if (form.price === "") setForm({ ...form, price: "0" });
+                  }}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
                   required
                 />
               </label>
@@ -298,7 +309,13 @@ function AdminPage() {
                   type="number"
                   min="0"
                   value={form.stock}
-                  onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                  onFocus={() => {
+                    if (form.stock === "0") setForm({ ...form, stock: "" });
+                  }}
+                  onBlur={() => {
+                    if (form.stock === "") setForm({ ...form, stock: "0" });
+                  }}
+                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
                 />
               </label>
             </div>
