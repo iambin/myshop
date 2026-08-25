@@ -1,13 +1,16 @@
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(__dirname, "..", "data");
-mkdirSync(dataDir, { recursive: true });
+// DATA_DIR override lets tests run against a throwaway directory
+export const DATA_DIR = process.env.DATA_DIR
+  ? resolve(process.env.DATA_DIR)
+  : join(__dirname, "..", "data");
+mkdirSync(DATA_DIR, { recursive: true });
 
-export const db = new Database(join(dataDir, "shop.db"));
+export const db = new Database(join(DATA_DIR, "shop.db"));
 db.pragma("journal_mode = WAL");
 
 export function initSchema() {
@@ -34,3 +37,7 @@ export function initSchema() {
     );
   `);
 }
+
+// Run at import time: route modules prepare statements while loading,
+// which fails on a fresh empty database if the schema doesn't exist yet.
+initSchema();

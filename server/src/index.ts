@@ -1,12 +1,10 @@
 import express from "express";
-import { db, initSchema } from "./db.js";
+import { db } from "./db.js";
 import { productsRouter } from "./routes/products.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { makeToken, verifyPassword } from "./auth.js";
 import { uploadsRouter, UPLOADS_DIR } from "./routes/uploads.js";
 import { statsRouter } from "./routes/stats.js";
-
-initSchema();
 
 if (!process.env.ADMIN_PASSWORD) {
   console.warn("WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.");

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "test": "node --test tests/api-flow.test.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",

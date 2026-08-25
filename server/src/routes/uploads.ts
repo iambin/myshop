@@ -3,17 +3,16 @@ import multer from "multer";
 import path from "node:path";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { fileURLToPath } from "node:url";
 import { requireAdmin } from "../auth.js";
+import { DATA_DIR } from "../db.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Keep uploads next to the SQLite file so a single volume mount covers both
-export const UPLOADS_DIR = path.resolve(__dirname, "../../data/uploads");
+export const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Images of deleted products are moved here instead of being removed,
 // so they stay recoverable until this directory is cleaned up manually
-export const DELETED_UPLOADS_DIR = path.resolve(__dirname, "../../data/uploads-deleted");
+export const DELETED_UPLOADS_DIR = path.join(DATA_DIR, "uploads-deleted");
 fs.mkdirSync(DELETED_UPLOADS_DIR, { recursive: true });
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
