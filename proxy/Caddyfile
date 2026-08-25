@@ -1,0 +1,14 @@
+{$DOMAIN} {
+	reverse_proxy myshop-web:80
+}
+
+# 新增第二個網站的步驟：
+# 1. 該專案 docker-compose.yml 的對外容器掛上外部網路 proxy-net，
+#    並取一個唯一的 alias（例：blog-web），不要映射主機埠
+# 2. 在此加一段：
+#
+#    blog.example.com {
+#    	reverse_proxy blog-web:80
+#    }
+#
+# 3. cd proxy && docker compose up -d（重新載入設定）

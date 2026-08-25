@@ -15,10 +15,23 @@ services:
   client:
     build: ./client
     restart: unless-stopped
-    ports:
-      - "80:80"
+    # TLS 由共用反向代理（proxy/ 的 Caddy）終結，這裡只聽內部 80，不綁主機埠
+    expose:
+      - "80"
+    networks:
+      default: {}
+      proxy-net:
+        aliases:
+          # 反向代理以此名稱分流到本站；多站共存時每個專案的 alias 必須唯一
+          - myshop-web
     depends_on:
       - server
 
 volumes:
   server-data:
+
+networks:
+  # 與 proxy/ 的 Caddy 共用的跨專案網路，需先一次性建立：
+  # docker network create proxy-net
+  proxy-net:
+    external: true

@@ -61,11 +61,19 @@ SQL 動態組 WHERE 子句時一律用 named parameters（`@q`），排序子句
 
 ### 部署（Docker）
 
+主機架構為「單一共用反向代理 + 多站容器」：
+
 ```bash
-cp .env.example .env   # 必須設定 ADMIN_PASSWORD，否則 compose 拒絕啟動
+docker network create proxy-net   # 一次性：跨專案共用網路
+
+cd proxy && cp .env.example .env  # 設定 DOMAIN（正式域名），全機只需跑一次
+docker compose up -d && cd ..
+
+cp .env.example .env              # 必須設定 ADMIN_PASSWORD，否則 compose 拒絕啟動
 docker compose up -d --build
 ```
 
-- `client` 容器：Node build → nginx，對外開 port 80，SPA fallback + 反代 `/api/` 到 `server:3001`
+- `proxy/`：Caddy 反向代理，全機唯一對外綁 80/443 的服務，統一管理各站 Let's Encrypt 憑證並依域名分流。新增網站 = 該專案容器掛 `proxy-net` 外部網路 + 取唯一 alias + 在 `proxy/Caddyfile` 加一段 `reverse_proxy`
+- `client` 容器：Node build → nginx，只開內部 80（TLS 已由 Caddy 終結）；SPA fallback + 反代 `/api/` 到 `server:3001`
 - `server` 容器：不對外開 port；DB 與上傳圖片持久化在 named volume `server-data`（容器內 `/app/data`）
 - 完整部署手冊見 `docs/deploy-vps-docker.md`、架構圖見 `docs/architecture-flow.md`

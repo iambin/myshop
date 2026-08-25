@@ -1,0 +1,28 @@
+# 共用反向代理：全機唯一對外綁 80/443 的服務。
+# 其他網站專案的容器一律不碰主機埠，改掛下方 proxy-net 由這裡分流。
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddyfile 以 {$DOMAIN} 帶入網址，自動申請並續約 Let's Encrypt 憑證
+      DOMAIN: ${DOMAIN:?請先複製 .env.example 為 .env 並設定 DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # 憑證與狀態持久化：重建容器不需重新簽發
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - proxy-net
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  # 需先一次性建立：docker network create proxy-net
+  proxy-net:
+    external: true
