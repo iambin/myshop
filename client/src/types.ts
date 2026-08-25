@@ -33,3 +33,11 @@ export interface ProductInput {
   stock: number;
   category_id: number;
 }
+
+export interface VisitStats {
+  online: number;
+  today: number;
+  week: number;
+  month: number;
+  total: number;
+}

@@ -1,0 +1,156 @@
+
+> myshop-server@0.1.0 dev
+> tsx watch src/index.ts
+
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+銝?10:11:09 [tsx] change in ./src\db.ts Restarting...
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001
+銝?10:11:10 [tsx] change in ./src\routes\products.ts Restarting...
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+銝?12:29:52 [tsx] change in ./src\db.ts Restarting...
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001
+銝?12:30:36 [tsx] change in ./src\index.ts Restarting...
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001
+銝?12:30:42 [tsx] change in ./src\index.ts Restarting...
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+TypeError: Cannot read properties of undefined (reading 'name')
+    at parseProductBody (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:34:25)
+    at <anonymous> (C:\Users\bin\Desktop\Memo\myshop\server\src\routes\products.ts:76:18)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:295:15
+    at processParams (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:582:12)
+    at next (C:\Users\bin\Desktop\Memo\myshop\server\node_modules\router\index.js:291:5)
+銝?12:33:01 [tsx] change in ./src\routes\stats.ts Restarting...
+WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.
+Server listening on http://localhost:3001

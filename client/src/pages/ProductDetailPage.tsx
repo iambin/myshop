@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchProduct } from "../api/client";
 import type { Product } from "../types";
+import { formatPrice } from "../utils/format";
 
 export function ProductDetailPage() {
   const { id } = useParams();
@@ -40,7 +41,7 @@ export function ProductDetailPage() {
         <div className="detail-info">
           <span className="category">{product.category_name}</span>
           <h1>{product.name}</h1>
-          <p className="price">${product.price.toFixed(2)}</p>
+          <p className="price">{formatPrice(product.price)}</p>
           <p className={product.stock > 0 ? "in-stock" : "out-of-stock"}>
             {product.stock > 0 ? `有庫存（${product.stock} 件）` : "已售完"}
           </p>

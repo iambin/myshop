@@ -41,6 +41,8 @@ export function HomePage() {
       .then((data) => {
         setProducts(data.items);
         setTotal(data.total);
+        // e.g. items were deleted while browsing a now-out-of-range page
+        if (data.items.length === 0 && data.total > 0 && page > 1) updateParams({ page: null });
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

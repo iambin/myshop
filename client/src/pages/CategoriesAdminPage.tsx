@@ -151,6 +151,11 @@ function CategoriesAdminPage() {
                 <td colSpan={4}>載入中…</td>
               </tr>
             )}
+            {!loading && categories.length === 0 && (
+              <tr>
+                <td colSpan={4}>查無資料</td>
+              </tr>
+            )}
             {!loading &&
               categories.map((c) => (
                 <tr key={c.id}>

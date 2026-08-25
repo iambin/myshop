@@ -4,6 +4,7 @@ import { productsRouter } from "./routes/products.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { makeToken, verifyPassword } from "./auth.js";
 import { uploadsRouter, UPLOADS_DIR } from "./routes/uploads.js";
+import { statsRouter } from "./routes/stats.js";
 
 initSchema();
 
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use("/api/products", productsRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/uploads", uploadsRouter);
+app.use("/api/stats", statsRouter);
 // Serve uploaded images; long cache is safe because filenames are unique
 app.use(
   "/api/uploads",

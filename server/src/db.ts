@@ -21,11 +21,16 @@ export function initSchema() {
       name TEXT NOT NULL,
       description TEXT DEFAULT '',
       specs TEXT DEFAULT '',
-      price REAL NOT NULL,
+      price INTEGER NOT NULL,
       image_url TEXT,
       stock INTEGER DEFAULT 0,
       category_id INTEGER REFERENCES categories(id),
       created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS visit_stats (
+      visitor_id TEXT PRIMARY KEY,
+      first_seen_at INTEGER NOT NULL,
+      last_seen_at INTEGER NOT NULL
     );
   `);
 }

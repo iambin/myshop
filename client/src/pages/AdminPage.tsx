@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   checkAdminAuth,
   createProduct,
@@ -10,9 +10,14 @@ import {
   uploadImage,
 } from "../api/client";
 import type { Category, Product } from "../types";
+import { formatPrice } from "../utils/format";
 import { AdminLoginPage } from "./AdminLoginPage";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { Pagination } from "../components/Pagination";
+import { VisitStatsPanel } from "../components/VisitStatsPanel";
+
+const PAGE_SIZE = 20;
 
 const EMPTY_FORM = {
   name: "",
@@ -26,7 +31,9 @@ const EMPTY_FORM = {
 
 function AdminPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -45,21 +52,47 @@ function AdminPage() {
 
   const [authed, setAuthed] = useState<boolean | null>(null);
 
-  function load() {
-    setLoading(true);
-    fetchProducts({ page: 1, pageSize: 50 })
-      .then((data) => setProducts(data.items))
-      .catch((e) => setMessage(`載入失敗：${e.message}`))
-      .finally(() => setLoading(false));
+  // List state lives in the URL query string (same pattern as HomePage)
+  const page = Number(searchParams.get("page")) || 1;
+  const q = searchParams.get("q") ?? "";
+  const category = searchParams.get("category") ?? "";
+  const [searchInput, setSearchInput] = useState(q);
+  // bumped to refetch after create/update/delete without touching the query string
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  function updateParams(changes: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === null || value === "") next.delete(key);
+      else next.set(key, value);
+    }
+    setSearchParams(next);
+  }
+
+  function reload() {
+    setRefreshTick((t) => t + 1);
   }
 
   useEffect(() => {
     checkAdminAuth()
       .then(setAuthed)
       .catch(() => setAuthed(false));
-    load();
     fetchCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!authed) return;
+    setLoading(true);
+    fetchProducts({ page, pageSize: PAGE_SIZE, q, category })
+      .then((data) => {
+        setProducts(data.items);
+        setTotal(data.total);
+        // e.g. items were deleted while browsing a now-out-of-range page
+        if (data.items.length === 0 && data.total > 0 && page > 1) updateParams({ page: null });
+      })
+      .catch((e) => setMessage(`載入失敗：${e.message}`))
+      .finally(() => setLoading(false));
+  }, [page, q, category, authed, refreshTick]);
 
   function openCreate() {
     setForm({ ...EMPTY_FORM, category_id: categories[0]?.id ?? 0 });
@@ -88,7 +121,7 @@ function AdminPage() {
       return;
     }
     if (!form.category_id) {
-      setFormError("請選擇分類");
+      setFormError(categories.length ? "請選擇分類" : "尚無分類，請先至分類管理新增");
       return;
     }
     setSaving(true);
@@ -110,7 +143,7 @@ function AdminPage() {
         setTimeout(() => setMessage(null), 3000);
       }
       setEditingId(null);
-      load();
+      reload();
     } catch (err) {
       handleAuthedError(err);
     } finally {
@@ -128,7 +161,7 @@ function AdminPage() {
       setTimeout(() => setMessage(null), 3000);
       if (editingId === deletingProduct.id) setEditingId(null);
       setDeletingProduct(null);
-      load();
+      reload();
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes("401")) {
@@ -172,7 +205,7 @@ function AdminPage() {
     return <p className="status">載入中…</p>;
   }
   if (!authed) {
-    return <AdminLoginPage onLogin={() => { setAuthed(true); load(); }} />;
+    return <AdminLoginPage onLogin={() => setAuthed(true)} />;
   }
 
   return (
@@ -203,12 +236,48 @@ function AdminPage() {
       <main className="admin-main">
         {message && <p className="status ok">{message}</p>}
 
-        <button
-          className="btn primary"
-          onClick={openCreate}
-        >
-          ＋ 新增商品
-        </button>
+        <VisitStatsPanel />
+
+        <div className="admin-toolbar">
+          <form
+            className="search-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateParams({ q: searchInput.trim(), page: null });
+            }}
+          >
+            <input
+              type="search"
+              placeholder="搜尋商品名稱…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            <button type="submit">搜尋</button>
+          </form>
+          <select
+            aria-label="依分類篩選"
+            value={category}
+            onChange={(e) => updateParams({ category: e.target.value, page: null })}
+          >
+            <option value="">全部分類</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="toolbar">
+          <span>
+            共 {total} 筆商品
+            {q && `，搜尋「${q}」`}
+            {category && `，分類「${category}」`}
+          </span>
+          <button className="btn primary" onClick={openCreate}>
+            ＋ 新增商品
+          </button>
+        </div>
 
         <table className="admin-table">
           <thead>
@@ -227,13 +296,18 @@ function AdminPage() {
                 <td colSpan={6}>載入中…</td>
               </tr>
             )}
+            {!loading && products.length === 0 && (
+              <tr>
+                <td colSpan={6}>查無資料</td>
+              </tr>
+            )}
             {!loading &&
               products.map((p) => (
                 <tr key={p.id}>
                   <td>{p.id}</td>
                   <td>{p.name}</td>
                   <td>{p.category_name}</td>
-                  <td>${p.price.toFixed(2)}</td>
+                  <td>{formatPrice(p.price)}</td>
                   <td>{p.stock}</td>
                   <td className="row-actions">
                     <button className="btn small" onClick={() => openEdit(p)}>
@@ -253,6 +327,13 @@ function AdminPage() {
               ))}
           </tbody>
         </table>
+
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={total}
+          onChange={(p) => updateParams({ page: String(p) })}
+        />
       </main>
 
       {editingId !== null && (

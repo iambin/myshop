@@ -107,7 +107,7 @@ for (const categoryName of categories) {
         `保固：一年`,
         `包裝：一般彩盒裝`,
       ].join("\n"),
-      price: Math.round(((5 + rand(9900)) / 10 + 4.99) * 100) / 100,
+      price: 5 + rand(990),
       image_url: `https://picsum.photos/seed/${encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"))}/600/600`,
       stock: 5 + rand(95),
       category_id: categoryId,

@@ -35,8 +35,8 @@ function parseProductBody(body: unknown): { ok: true; data: NewProductData } | {
   if (!name) return { ok: false, error: "name is required" };
   const price = Number(b.price);
   if (!Number.isFinite(price) || price < 0) return { ok: false, error: "price must be a non-negative number" };
-  // round to 2 decimals to avoid float artifacts (e.g. 42.690000000000005) entering the DB
-  const roundedPrice = Math.round(price * 100) / 100;
+  // store prices as integers (TWD cents are not used)
+  const roundedPrice = Math.round(price);
   const stock = b.stock === undefined || b.stock === null || b.stock === "" ? 0 : Number(b.stock);
   if (!Number.isInteger(stock) || stock < 0) return { ok: false, error: "stock must be a non-negative integer" };
   const category_id = Number(b.category_id);

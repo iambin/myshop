@@ -1,4 +1,4 @@
-import type { Category, Product, ProductListResponse } from "../types";
+import type { Category, Product, ProductListResponse, VisitStats } from "../types";
 
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -26,8 +26,11 @@ export function fetchProducts(query: ProductQuery): Promise<ProductListResponse>
   return get<ProductListResponse>(`/api/products?${params}`);
 }
 
-export function fetchProduct(id: number | string): Promise<Product> {
-  return get<Product>(`/api/products/${id}`);
+export async function fetchProduct(id: number | string): Promise<Product> {
+  const res = await fetch(`/api/products/${id}`);
+  if (res.status === 404) throw new Error("商品不存在或已下架");
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return res.json() as Promise<Product>;
 }
 
 export function fetchCategories(): Promise<Category[]> {
@@ -105,4 +108,26 @@ export function updateCategory(id: number, name: string): Promise<{ ok: boolean 
 
 export function deleteCategory(id: number): Promise<{ ok: boolean }> {
   return send("DELETE", `/api/categories/${id}`);
+}
+
+const VISITOR_ID_KEY = "shop_visitor_id";
+
+function getVisitorId(): string {
+  let id = localStorage.getItem(VISITOR_ID_KEY);
+  if (!id) {
+    id =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(VISITOR_ID_KEY, id);
+  }
+  return id;
+}
+
+export function sendHeartbeat(): Promise<{ ok: boolean }> {
+  return send("POST", "/api/stats/heartbeat", { visitorId: getVisitorId() });
+}
+
+export function fetchVisitStats(): Promise<VisitStats> {
+  return get<VisitStats>("/api/stats/visits");
 }

@@ -1,4 +1,5 @@
 import { Logo } from "./Logo";
+import { VisitorStats } from "./VisitorStats";
 
 const MAPS_URL =
   "https://www.google.com/maps/search/?api=1&query=" +
@@ -31,6 +32,7 @@ export function Footer() {
           </p>
         </div>
         <div className="footer-copyright">
+          <VisitorStats />
           <p>© {new Date().getFullYear()} 常吉園藝 版權所有</p>
         </div>
       </div>
