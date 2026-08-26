@@ -14,6 +14,8 @@ export interface ProductQuery {
   q?: string;
   category?: string;
   sort?: string;
+  /** true → 管理模式（含下架商品，需登入） */
+  all?: boolean;
 }
 
 export function fetchProducts(query: ProductQuery): Promise<ProductListResponse> {
@@ -22,7 +24,8 @@ export function fetchProducts(query: ProductQuery): Promise<ProductListResponse>
   if (query.pageSize) params.set("pageSize", String(query.pageSize));
   if (query.q) params.set("q", query.q);
   if (query.category) params.set("category", query.category);
-  if (query.sort && query.sort !== "newest") params.set("sort", query.sort);
+  if (query.sort && query.sort !== "default") params.set("sort", query.sort);
+  if (query.all) params.set("all", "1");
   return get<ProductListResponse>(`/api/products?${params}`);
 }
 
@@ -45,6 +48,8 @@ export interface ProductInput {
   image_url: string | null;
   stock: number;
   category_id: number;
+  is_active: number;
+  sort_order: number;
 }
 
 async function send<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -92,18 +97,28 @@ export async function checkAdminAuth(): Promise<boolean> {
 
 export interface CategoryWithCount extends Category {
   product_count: number;
+  active_product_count: number;
+  is_active: number;
+  sort_order: number;
 }
 
+/** 管理列表：含手動下架與自動下架（無上架商品）的分類，需登入 */
 export function fetchCategoriesWithCount(): Promise<CategoryWithCount[]> {
-  return get<CategoryWithCount[]>("/api/categories");
+  return get<CategoryWithCount[]>("/api/categories?all=1");
 }
 
-export function createCategory(name: string): Promise<{ id: number }> {
-  return send("POST", "/api/categories", { name });
+export interface CategoryInput {
+  name: string;
+  is_active: number;
+  sort_order: number;
 }
 
-export function updateCategory(id: number, name: string): Promise<{ ok: boolean }> {
-  return send("PUT", `/api/categories/${id}`, { name });
+export function createCategory(input: CategoryInput): Promise<{ id: number }> {
+  return send("POST", "/api/categories", input);
+}
+
+export function updateCategory(id: number, input: CategoryInput): Promise<{ ok: boolean }> {
+  return send("PUT", `/api/categories/${id}`, input);
 }
 
 export function deleteCategory(id: number): Promise<{ ok: boolean }> {

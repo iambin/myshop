@@ -12,17 +12,41 @@ import { AdminLoginPage } from "./AdminLoginPage";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 
+function categoryStatus(c: CategoryWithCount): { label: string; cls: string } {
+  if (!c.is_active) return { label: "已下架", cls: "off" };
+  if (c.active_product_count === 0) return { label: "自動下架（無上架商品）", cls: "auto" };
+  return { label: "上架", cls: "on" };
+}
+
 function CategoriesAdminPage() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
-  // editingId === "new" → creating; number → renaming; null → idle
+  // editingId === "new" → creating; number → editing that category; null → idle
   const [editingId, setEditingId] = useState<number | "new" | null>(null);
   const [nameInput, setNameInput] = useState("");
+  const [activeInput, setActiveInput] = useState(true);
+  const [sortOrderInput, setSortOrderInput] = useState("99");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function openCreate() {
+    setNameInput("");
+    setActiveInput(true);
+    setSortOrderInput("99");
+    setEditingId("new");
+    setError(null);
+  }
+
+  function openEdit(c: CategoryWithCount) {
+    setNameInput(c.name);
+    setActiveInput(c.is_active !== 0);
+    setSortOrderInput(String(c.sort_order));
+    setEditingId(c.id);
+    setError(null);
+  }
 
   // deletingCategory !== null → delete confirmation dialog open
   const [deletingCategory, setDeletingCategory] = useState<CategoryWithCount | null>(null);
@@ -43,8 +67,12 @@ function CategoriesAdminPage() {
     checkAdminAuth()
       .then(setAuthed)
       .catch(() => setAuthed(false));
-    load();
   }, []);
+
+  // list endpoint (?all=1) needs the admin cookie → load only after auth passes
+  useEffect(() => {
+    if (authed) load();
+  }, [authed]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -54,9 +82,14 @@ function CategoriesAdminPage() {
     }
     setSaving(true);
     setError(null);
+    const input = {
+      name: nameInput.trim(),
+      is_active: activeInput ? 1 : 0,
+      sort_order: Math.max(0, Math.round(Number(sortOrderInput) || 0)),
+    };
     try {
-      if (editingId === "new") await createCategory(nameInput.trim());
-      else if (typeof editingId === "number") await updateCategory(editingId, nameInput.trim());
+      if (editingId === "new") await createCategory(input);
+      else if (typeof editingId === "number") await updateCategory(editingId, input);
       setMessage(editingId === "new" ? "分類已新增" : "分類已更新");
       setTimeout(() => setMessage(null), 3000);
       setEditingId(null);
@@ -97,7 +130,7 @@ function CategoriesAdminPage() {
     return <p className="status">載入中…</p>;
   }
   if (!authed) {
-    return <AdminLoginPage onLogin={() => { setAuthed(true); load(); }} />;
+    return <AdminLoginPage onLogin={() => setAuthed(true)} />;
   }
 
   return (
@@ -127,11 +160,7 @@ function CategoriesAdminPage() {
 
         <button
           className="btn primary"
-          onClick={() => {
-            setNameInput("");
-            setEditingId("new");
-            setError(null);
-          }}
+          onClick={openCreate}
         >
           ＋ 新增分類
         </button>
@@ -141,38 +170,39 @@ function CategoriesAdminPage() {
             <tr>
               <th>ID</th>
               <th>名稱</th>
-              <th>商品數</th>
+              <th>上架商品數</th>
+              <th>排序</th>
+              <th>狀態</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4}>載入中…</td>
+                <td colSpan={6}>載入中…</td>
               </tr>
             )}
             {!loading && categories.length === 0 && (
               <tr>
-                <td colSpan={4}>查無資料</td>
+                <td colSpan={6}>查無資料</td>
               </tr>
             )}
             {!loading &&
-              categories.map((c) => (
-                <tr key={c.id}>
-                  <td>{c.id}</td>
-                  <td>{c.name}</td>
-                  <td>{c.product_count}</td>
-                  <td className="row-actions">
-                    <button
-                      className="btn small"
-                      onClick={() => {
-                        setNameInput(c.name);
-                        setEditingId(c.id);
-                        setError(null);
-                      }}
-                    >
-                      改名
-                    </button>
+              categories.map((c) => {
+                const st = categoryStatus(c);
+                return (
+                  <tr key={c.id} className={st.cls === "on" ? "" : "row-inactive"}>
+                    <td>{c.id}</td>
+                    <td>{c.name}</td>
+                    <td>{c.active_product_count}</td>
+                    <td>{c.sort_order}</td>
+                    <td>
+                      <span className={`badge ${st.cls}`}>{st.label}</span>
+                    </td>
+                    <td className="row-actions">
+                      <button className="btn small" onClick={() => openEdit(c)}>
+                        編輯
+                      </button>
                     <button
                       className="btn small danger"
                       onClick={() => {
@@ -182,16 +212,17 @@ function CategoriesAdminPage() {
                     >
                       刪除
                     </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </main>
 
       {editingId !== null && (
         <Modal
-          title={editingId === "new" ? "新增分類" : "重新命名分類"}
+          title={editingId === "new" ? "新增分類" : "編輯分類"}
           onClose={() => setEditingId(null)}
         >
           <form className="product-form category-form" onSubmit={handleSave}>
@@ -199,6 +230,26 @@ function CategoriesAdminPage() {
               分類名稱 *
               <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} autoFocus required />
             </label>
+            <div className="form-row">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={activeInput}
+                  onChange={(e) => setActiveInput(e.target.checked)}
+                />
+                啟用中（無上架商品時仍會自動下架）
+              </label>
+              <label>
+                排序
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={sortOrderInput}
+                  onChange={(e) => setSortOrderInput(e.target.value)}
+                />
+              </label>
+            </div>
             {error && <p className="status error">{error}</p>}
             <div className="form-actions">
               <button type="submit" className="btn primary" disabled={saving}>

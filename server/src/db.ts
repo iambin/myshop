@@ -36,6 +36,18 @@ export function initSchema() {
       last_seen_at INTEGER NOT NULL
     );
   `);
+  // Migrations for databases created before the listing/sort columns existed.
+  addColumnIfMissing("products", "is_active", "INTEGER NOT NULL DEFAULT 1");
+  addColumnIfMissing("products", "sort_order", "INTEGER NOT NULL DEFAULT 999");
+  addColumnIfMissing("categories", "is_active", "INTEGER NOT NULL DEFAULT 1");
+  addColumnIfMissing("categories", "sort_order", "INTEGER NOT NULL DEFAULT 99");
+}
+
+function addColumnIfMissing(table: string, column: string, ddl: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
 }
 
 // Run at import time: route modules prepare statements while loading,

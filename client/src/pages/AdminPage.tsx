@@ -27,6 +27,8 @@ const EMPTY_FORM = {
   image_url: "",
   stock: "0",
   category_id: 0,
+  is_active: true,
+  sort_order: "999",
 };
 
 function AdminPage() {
@@ -83,7 +85,7 @@ function AdminPage() {
   useEffect(() => {
     if (!authed) return;
     setLoading(true);
-    fetchProducts({ page, pageSize: PAGE_SIZE, q, category })
+    fetchProducts({ page, pageSize: PAGE_SIZE, q, category, all: true })
       .then((data) => {
         setProducts(data.items);
         setTotal(data.total);
@@ -109,6 +111,8 @@ function AdminPage() {
       image_url: p.image_url ?? "",
       stock: String(p.stock),
       category_id: p.category_id,
+      is_active: p.is_active !== 0,
+      sort_order: String(p.sort_order),
     });
     setEditingId(p.id);
     setFormError(null);
@@ -132,6 +136,8 @@ function AdminPage() {
         image_url: form.image_url.trim() || null,
         price: Number(form.price) || 0,
         stock: Number(form.stock) || 0,
+        is_active: form.is_active ? 1 : 0,
+        sort_order: Math.max(0, Math.round(Number(form.sort_order) || 0)),
       };
       if (editingId === "new") {
         await createProduct(input);
@@ -287,28 +293,36 @@ function AdminPage() {
               <th>分類</th>
               <th>價格</th>
               <th>庫存</th>
+              <th>排序</th>
+              <th>狀態</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6}>載入中…</td>
+                <td colSpan={8}>載入中…</td>
               </tr>
             )}
             {!loading && products.length === 0 && (
               <tr>
-                <td colSpan={6}>查無資料</td>
+                <td colSpan={8}>查無資料</td>
               </tr>
             )}
             {!loading &&
               products.map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id} className={p.is_active ? "" : "row-inactive"}>
                   <td>{p.id}</td>
                   <td>{p.name}</td>
                   <td>{p.category_name}</td>
                   <td>{formatPrice(p.price)}</td>
                   <td>{p.stock}</td>
+                  <td>{p.sort_order}</td>
+                  <td>
+                    <span className={p.is_active ? "badge on" : "badge off"}>
+                      {p.is_active ? "上架" : "下架"}
+                    </span>
+                  </td>
                   <td className="row-actions">
                     <button className="btn small" onClick={() => openEdit(p)}>
                       編輯
@@ -366,6 +380,26 @@ function AdminPage() {
                 ))}
               </select>
             </label>
+            <div className="form-row">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                />
+                上架中（取消勾選＝下架，前台不顯示）
+              </label>
+              <label>
+                排序
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.sort_order}
+                  onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+                />
+              </label>
+            </div>
             <div className="form-row">
               <label>
                 價格 *

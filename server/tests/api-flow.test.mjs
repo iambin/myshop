@@ -174,13 +174,25 @@ test("新增分類 → 201 { id }；重複名稱 → 409", async () => {
   catTreeId = (await resTree.json()).id;
 });
 
-test("GET /api/categories 附 product_count", async () => {
-  const res = await api("GET", "/api/categories");
-  const cats = await res.json();
+test("GET /api/categories 公開列表隱藏無上架商品的分類；all=1（管理）回全部含新欄位", async () => {
+  // 尚無任何上架商品 → 兩個分類都應被自動下架，公開列表為空
+  const pub = await api("GET", "/api/categories");
+  assert.equal(pub.status, 200);
+  assert.deepEqual(await pub.json(), []);
+
+  const all = await api("GET", "/api/categories?all=1", { cookie: adminCookie });
+  assert.equal(all.status, 200);
+  const cats = await all.json();
   assert.ok(Array.isArray(cats) && cats.length === 2);
   for (const c of cats) {
-    assert.equal(c.product_count, 0);
+    assert.equal(c.is_active, 1);
+    assert.equal(c.sort_order, 99, "default sort_order should be 99");
+    assert.equal(c.active_product_count, 0);
   }
+
+  // all=1 未登入 → 401
+  const unauthorized = await api("GET", "/api/categories?all=1");
+  assert.equal(unauthorized.status, 401);
 });
 
 // ── 商品新增／詳情／欄位驗證 ──
@@ -374,6 +386,141 @@ test("DELETE 後分類的 product_count 同步減少", async () => {
   const cats = await (await api("GET", "/api/categories")).json();
   const flower = cats.find((c) => c.id === catFlowerId);
   assert.equal(flower.product_count, 1); // 只剩玫瑰盆栽
+});
+
+// ── 商品下架／自訂排序／分類自動下架 ──
+
+test("新商品預設 is_active=1、sort_order=999", async () => {
+  const data = await (await api("GET", "/api/products?all=1", { cookie: adminCookie })).json();
+  const a = data.items.find((p) => p.id === productA);
+  assert.equal(a.is_active, 1);
+  assert.equal(a.sort_order, 999);
+});
+
+test("商品下架後：公開列表與詳情看不到，all=1 仍可見", async () => {
+  const res = await api("PUT", `/api/products/${productA}`, {
+    json: {
+      name: "玫瑰盆栽（大）",
+      description: "改版描述",
+      specs: "",
+      price: 150,
+      stock: 5,
+      category_id: catFlowerId,
+      image_url: null,
+      is_active: false,
+    },
+    cookie: adminCookie,
+  });
+  assert.equal(res.status, 200);
+
+  const pub = await (await api("GET", "/api/products")).json();
+  assert.ok(!pub.items.some((p) => p.id === productA), "delisted product must be hidden publicly");
+
+  const detail = await api("GET", `/api/products/${productA}`);
+  assert.equal(detail.status, 404);
+
+  const all = await (await api("GET", "/api/products?all=1", { cookie: adminCookie })).json();
+  const a = all.items.find((p) => p.id === productA);
+  assert.equal(a.is_active, 0);
+});
+
+test("分類底下沒有上架商品時自動下架（公開列表消失，all=1 仍在）", async () => {
+  // 花卉唯一的商品剛被下架 → 公開列表應只剩樹木
+  const pub = await (await api("GET", "/api/categories")).json();
+  assert.deepEqual(
+    pub.map((c) => c.name),
+    ["測試樹木"]
+  );
+
+  const all = await (await api("GET", "/api/categories?all=1", { cookie: adminCookie })).json();
+  const flower = all.find((c) => c.id === catFlowerId);
+  const tree = all.find((c) => c.id === catTreeId);
+  assert.equal(flower.active_product_count, 0);
+  assert.equal(tree.active_product_count, 2);
+});
+
+test("欄位驗證：is_active 非布林／sort_order 負數或非整數 → 400", async () => {
+  const badActive = await api("POST", "/api/products", {
+    json: { name: "x", price: 1, category_id: catFlowerId, is_active: "yes" },
+    cookie: adminCookie,
+  });
+  assert.equal(badActive.status, 400);
+
+  const badSort = await api("PUT", `/api/products/${productA}`, {
+    json: {
+      name: "x", price: 1, category_id: catFlowerId, sort_order: -1,
+    },
+    cookie: adminCookie,
+  });
+  assert.equal(badSort.status, 400);
+
+  const badCatSort = await api("PUT", `/api/categories/${catFlowerId}`, {
+    json: { name: "測試花卉", sort_order: 1.5 },
+    cookie: adminCookie,
+  });
+  assert.equal(badCatSort.status, 400);
+});
+
+test("sort_order 越小越前面；商品重新上架時分類自動恢復上架", async () => {
+  // 重新上架玫瑰並給最小排序；B/C 維持預設 999
+  const putA = await api("PUT", `/api/products/${productA}`, {
+    json: {
+      name: "玫瑰盆栽（大）",
+      description: "改版描述",
+      specs: "",
+      price: 150,
+      stock: 5,
+      category_id: catFlowerId,
+      image_url: null,
+      is_active: true,
+      sort_order: 1,
+    },
+    cookie: adminCookie,
+  });
+  assert.equal(putA.status, 200);
+
+  // 預設排序：sort_order 小者先，平手時 id 新者先 → [A(1), C(999), B(999)]
+  const def = await (await api("GET", "/api/products")).json();
+  assert.deepEqual(def.items.map((p) => p.id), [productA, productC, productB]);
+
+  // 明指定 newest 維持由新到舊 → [C, B, A]
+  const newest = await (await api("GET", "/api/products?sort=newest")).json();
+  assert.deepEqual(newest.items.map((p) => p.id), [productC, productB, productA]);
+
+  // 花卉有上架商品了 → 公開分類列表自動恢復，順序 sort_order 小者先、平手 id 小者先
+  const pub = await (await api("GET", "/api/categories")).json();
+  assert.deepEqual(
+    pub.map((c) => c.name),
+    ["測試花卉", "測試樹木"]
+  );
+  assert.equal(pub[0].product_count, 1);
+  assert.equal(pub[1].product_count, 2);
+});
+
+test("分類手動下架：即使仍有上架商品也不出現在公開列表", async () => {
+  const off = await api("PUT", `/api/categories/${catTreeId}`, {
+    json: { name: "測試樹木", is_active: false },
+    cookie: adminCookie,
+  });
+  assert.equal(off.status, 200);
+
+  let pub = await (await api("GET", "/api/categories")).json();
+  assert.deepEqual(
+    pub.map((c) => c.name),
+    ["測試花卉"]
+  );
+
+  const on = await api("PUT", `/api/categories/${catTreeId}`, {
+    json: { name: "測試樹木" },
+    cookie: adminCookie,
+  });
+  assert.equal(on.status, 200);
+
+  pub = await (await api("GET", "/api/categories")).json();
+  assert.deepEqual(
+    pub.map((c) => c.name),
+    ["測試花卉", "測試樹木"]
+  );
 });
 
 // ── 登出 ──

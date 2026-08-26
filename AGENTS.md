@@ -41,10 +41,10 @@ npm run build         # 生產構建（含 tsc -b）
 
 ### Server
 
-- `src/db.ts` — 建立 SQLite 連線（WAL mode）+ `initSchema()` 建表。schema：`categories(id, name)`、`products(id, name, description, specs, price, image_url, stock, category_id, created_at)`、`visit_stats(visitor_id PK, first_seen_at, last_seen_at)`（epoch ms，避免時區問題）
+- `src/db.ts` — 建立 SQLite 連線（WAL mode）+ `initSchema()` 建表與欄位遷移（`addColumnIfMissing`）。schema：`categories(id, name, is_active, sort_order)`、`products(id, name, description, specs, price, image_url, stock, category_id, is_active, sort_order, created_at)`、`visit_stats(visitor_id PK, first_seen_at, last_seen_at)`（epoch ms，避免時區問題）。`is_active` 1=上架 0=下架；`sort_order` 越小越前面（products 預設 999、categories 預設 99）
 - `src/auth.ts` — 自製 HMAC-SHA256 token 認證。session 以 cookie `admin_token` 傳遞（HttpOnly + SameSite=Lax）；`requireAdmin` middleware 驗證 token。預設密碼 `1971`，生產環境請透過 `ADMIN_PASSWORD` 環境變數覆蓋；`AUTH_SECRET` 未設定時每次重啟會使所有 session 失效
-- `src/routes/products.ts` — `GET /api/products`（query: `page`, `pageSize`(上限50), `q` 搜尋, `category`, `sort`= newest|price_asc|price_desc）、`GET /api/products/:id`、`POST/PUT/DELETE` 需 admin 認證
-- `src/routes/categories.ts` — `GET /api/categories`（公開，附 `product_count`）、`POST/PUT/DELETE` 需 admin 認證
+- `src/routes/products.ts` — `GET /api/products`（query: `page`, `pageSize`(上限50), `q` 搜尋, `category`, `sort`= default(自訂排序)|newest|price_asc|price_desc；公開只回上架商品）、`GET /api/products?all=1`（管理視圖含下架商品，需 admin）、`GET /api/products/:id`（下架商品回 404）、`POST/PUT/DELETE` 需 admin 認證
+- `src/routes/categories.ts` — `GET /api/categories`（公開：只回「啟用且至少有一筆上架商品」的分類，無上架商品＝自動下架，附 `product_count`）；`GET /api/categories?all=1` 管理視圖（附 `active_product_count`/`is_active`/`sort_order`，需 admin）；`POST/PUT/DELETE` 需 admin 認證。自動下架為查詢時推導，不回寫欄位
 - `src/routes/uploads.ts` — `POST /api/uploads`（上傳圖片，存於 `data/uploads/`，最多 5MB）；提供 `retireUploadedImage()` 在刪除商品時將圖片移至 `data/uploads-deleted/`
 - `src/routes/stats.ts` — `POST /api/stats/heartbeat`（訪客心跳，visitorId 上報）、`GET /api/stats/visits`（公開：`online`/`today`/`week`/`month`/`total`；online = 最後心跳 5 分鐘內，各期以最後活動時間落在期間內計，週界為週一）
 - `src/index.ts` — 掛載所有路由、`/api/admin/login`、`/api/admin/logout`

@@ -8,6 +8,7 @@ import { Logo } from "../components/Logo";
 
 const PAGE_SIZE = 12;
 const SORT_OPTIONS = [
+  { value: "default", label: "預設排序" },
   { value: "newest", label: "最新上架" },
   { value: "price_asc", label: "價格：由低到高" },
   { value: "price_desc", label: "價格：由高到低" },
@@ -24,7 +25,7 @@ export function HomePage() {
   const page = Number(searchParams.get("page")) || 1;
   const q = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? "";
-  const sort = searchParams.get("sort") ?? "newest";
+  const sort = searchParams.get("sort") ?? "default";
   const [searchInput, setSearchInput] = useState(q);
 
   useEffect(() => {
