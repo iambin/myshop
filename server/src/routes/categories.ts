@@ -108,6 +108,17 @@ categoriesRouter.put("/:id", (req, res) => {
     res.status(400).json({ error: parsed.error });
     return;
   }
+  // Delisting is blocked while the category still holds active products —
+  // delist or move those products first.
+  if (parsed.data.is_active === 0) {
+    const activeProduct = db
+      .prepare("SELECT id FROM products WHERE category_id = ? AND is_active = 1 LIMIT 1")
+      .get(id);
+    if (activeProduct) {
+      res.status(409).json({ error: "此分類下仍有上架中的商品，請先下架或移除商品" });
+      return;
+    }
+  }
   try {
     db.prepare("UPDATE categories SET name = ?, is_active = ?, sort_order = ? WHERE id = ?").run(
       parsed.data.name,

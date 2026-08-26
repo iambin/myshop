@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   checkAdminAuth,
@@ -14,7 +14,8 @@ import ConfirmDialog from "../components/ConfirmDialog";
 
 function categoryStatus(c: CategoryWithCount): { label: string; cls: string } {
   if (!c.is_active) return { label: "已下架", cls: "off" };
-  if (c.active_product_count === 0) return { label: "自動下架（無上架商品）", cls: "auto" };
+  if (c.active_product_count === 0)
+    return { label: "啟用中（暫無上架商品，前台隱藏）", cls: "auto" };
   return { label: "上架", cls: "on" };
 }
 
@@ -28,6 +29,11 @@ function CategoriesAdminPage() {
   const [editingId, setEditingId] = useState<number | "new" | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [activeInput, setActiveInput] = useState(true);
+  // storedFlag = the category's persisted is_active; activeTouched = the
+  // user flipped the checkbox this session. Together they let handleSave
+  // keep is_active=1 for an untouched auto-delisted category.
+  const activeStateRef = useRef({ storedFlag: true });
+  const [activeTouched, setActiveTouched] = useState(false);
   const [sortOrderInput, setSortOrderInput] = useState("99");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -35,6 +41,8 @@ function CategoriesAdminPage() {
   function openCreate() {
     setNameInput("");
     setActiveInput(true);
+    setActiveTouched(false);
+    activeStateRef.current = { storedFlag: true };
     setSortOrderInput("99");
     setEditingId("new");
     setError(null);
@@ -42,7 +50,11 @@ function CategoriesAdminPage() {
 
   function openEdit(c: CategoryWithCount) {
     setNameInput(c.name);
-    setActiveInput(c.is_active !== 0);
+    // reflect the effective storefront state: manually delisted OR
+    // auto-delisted (no active products) both mean "not shown"
+    setActiveInput(c.is_active !== 0 && c.active_product_count > 0);
+    setActiveTouched(false);
+    activeStateRef.current = { storedFlag: c.is_active !== 0 };
     setSortOrderInput(String(c.sort_order));
     setEditingId(c.id);
     setError(null);
@@ -84,7 +96,10 @@ function CategoriesAdminPage() {
     setError(null);
     const input = {
       name: nameInput.trim(),
-      is_active: activeInput ? 1 : 0,
+      // untouched auto-delisted category (checkbox shows unchecked but the
+      // stored flag is 1) keeps is_active=1 so relisting a product restores
+      // it; only an explicit untick by the user writes a manual delist
+      is_active: activeInput || (!activeTouched && activeStateRef.current.storedFlag) ? 1 : 0,
       sort_order: Math.max(0, Math.round(Number(sortOrderInput) || 0)),
     };
     try {
@@ -235,9 +250,12 @@ function CategoriesAdminPage() {
                 <input
                   type="checkbox"
                   checked={activeInput}
-                  onChange={(e) => setActiveInput(e.target.checked)}
+                  onChange={(e) => {
+                    setActiveInput(e.target.checked);
+                    setActiveTouched(true);
+                  }}
                 />
-                啟用中（無上架商品時仍會自動下架）
+                啟用中（前台顯示此分類；無上架商品時自動下架）
               </label>
               <label>
                 排序
@@ -250,6 +268,17 @@ function CategoriesAdminPage() {
                 />
               </label>
             </div>
+            {typeof editingId === "number" &&
+              (() => {
+                const c = categories.find((x) => x.id === editingId);
+                if (!c || c.is_active === 0 || c.active_product_count > 0) return null;
+                return (
+                  <p className="status">
+                    此分類仍為啟用，只是暫無上架商品所以前台隱藏；商品（重新）上架後會自動恢復顯示，
+                    新增商品時也可正常選用此分類。
+                  </p>
+                );
+              })()}
             {error && <p className="status error">{error}</p>}
             <div className="form-actions">
               <button type="submit" className="btn primary" disabled={saving}>

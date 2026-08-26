@@ -4,12 +4,13 @@ import {
   checkAdminAuth,
   createProduct,
   deleteProduct,
-  fetchCategories,
+  fetchCategoriesWithCount,
   fetchProducts,
   updateProduct,
   uploadImage,
+  type CategoryWithCount,
 } from "../api/client";
-import type { Category, Product } from "../types";
+import type { Product } from "../types";
 import { formatPrice } from "../utils/format";
 import { AdminLoginPage } from "./AdminLoginPage";
 import Modal from "../components/Modal";
@@ -36,7 +37,7 @@ function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -75,11 +76,18 @@ function AdminPage() {
     setRefreshTick((t) => t + 1);
   }
 
+  // Admin selects use every ENABLED category, including ones with no products yet —
+  // otherwise a brand-new category (auto-hidden publicly) could never be picked.
+  const enabledCategories = categories.filter((c) => c.is_active !== 0);
+
   useEffect(() => {
     checkAdminAuth()
-      .then(setAuthed)
+      .then((ok) => {
+        setAuthed(ok);
+        // all=1 needs the admin cookie → load only after auth passes (same as CategoriesAdminPage)
+        if (ok) fetchCategoriesWithCount().then(setCategories).catch(() => setCategories([]));
+      })
       .catch(() => setAuthed(false));
-    fetchCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
@@ -97,7 +105,7 @@ function AdminPage() {
   }, [page, q, category, authed, refreshTick]);
 
   function openCreate() {
-    setForm({ ...EMPTY_FORM, category_id: categories[0]?.id ?? 0 });
+    setForm({ ...EMPTY_FORM, category_id: enabledCategories[0]?.id ?? 0 });
     setEditingId("new");
     setFormError(null);
   }
@@ -214,6 +222,13 @@ function AdminPage() {
     return <AdminLoginPage onLogin={() => setAuthed(true)} />;
   }
 
+  // Editing a product whose category was manually disabled afterwards → keep it in
+  // the dropdown so the current value stays visible instead of showing blank.
+  const formCategoryOptions =
+    typeof editingId === "number" && !enabledCategories.some((c) => c.id === form.category_id)
+      ? [...enabledCategories, ...categories.filter((c) => c.id === form.category_id)]
+      : enabledCategories;
+
   return (
     <div className="admin">
       <header className="header">
@@ -266,7 +281,7 @@ function AdminPage() {
             onChange={(e) => updateParams({ category: e.target.value, page: null })}
           >
             <option value="">全部分類</option>
-            {categories.map((c) => (
+            {enabledCategories.map((c) => (
               <option key={c.id} value={c.name}>
                 {c.name}
               </option>
@@ -373,9 +388,10 @@ function AdminPage() {
                 <option value={0} disabled>
                   請選擇
                 </option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
+                {formCategoryOptions.map((c) => (
+                  <option key={c.id} value={c.id} disabled={c.is_active === 0}>
                     {c.name}
+                    {c.is_active === 0 ? "（已下架，請至分類管理啟用）" : ""}
                   </option>
                 ))}
               </select>

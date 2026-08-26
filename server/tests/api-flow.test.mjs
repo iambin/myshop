@@ -497,7 +497,36 @@ test("sort_order 越小越前面；商品重新上架時分類自動恢復上架
   assert.equal(pub[1].product_count, 2);
 });
 
-test("分類手動下架：即使仍有上架商品也不出現在公開列表", async () => {
+test("分類下架防護：仍有上架商品 → 409；商品全下架後才可下架", async () => {
+  // 樹木仍有 B/C 兩筆上架商品 → 下架應被拒絕
+  const blocked = await api("PUT", `/api/categories/${catTreeId}`, {
+    json: { name: "測試樹木", is_active: false },
+    cookie: adminCookie,
+  });
+  assert.equal(blocked.status, 409);
+  assert.match((await blocked.json()).error, /上架/);
+
+  const pubBefore = await (await api("GET", "/api/categories")).json();
+  assert.deepEqual(
+    pubBefore.map((c) => c.name),
+    ["測試花卉", "測試樹木"],
+    "blocked delist must not hide the category"
+  );
+
+  // 下架 B、C 後即可成功下架分類
+  const productsOff = await Promise.all(
+    [
+      [productB, { name: "榕樹苗", description: "好照顧的樹", price: 300, stock: 0 }],
+      [productC, { name: "桂花樹", description: "秋天開花", price: 200, stock: 7 }],
+    ].map(([pid, base]) =>
+      api("PUT", `/api/products/${pid}`, {
+        json: { ...base, specs: "", category_id: catTreeId, image_url: null, is_active: false },
+        cookie: adminCookie,
+      })
+    )
+  );
+  for (const r of productsOff) assert.equal(r.status, 200);
+
   const off = await api("PUT", `/api/categories/${catTreeId}`, {
     json: { name: "測試樹木", is_active: false },
     cookie: adminCookie,
@@ -510,17 +539,40 @@ test("分類手動下架：即使仍有上架商品也不出現在公開列表",
     ["測試花卉"]
   );
 
+  // 還原：分類與 B/C 重新上架
   const on = await api("PUT", `/api/categories/${catTreeId}`, {
     json: { name: "測試樹木" },
     cookie: adminCookie,
   });
   assert.equal(on.status, 200);
 
+  const productsOn = await Promise.all(
+    [
+      [productB, { name: "榕樹苗", description: "好照顧的樹", price: 300, stock: 0 }],
+      [productC, { name: "桂花樹", description: "秋天開花", price: 200, stock: 7 }],
+    ].map(([pid, base]) =>
+      api("PUT", `/api/products/${pid}`, {
+        json: { ...base, specs: "", category_id: catTreeId, image_url: null, is_active: true },
+        cookie: adminCookie,
+      })
+    )
+  );
+  for (const r of productsOn) assert.equal(r.status, 200);
+
   pub = await (await api("GET", "/api/categories")).json();
   assert.deepEqual(
     pub.map((c) => c.name),
     ["測試花卉", "測試樹木"]
   );
+});
+
+test("分類刪除防護：分類下仍有商品（含下架）→ 409", async () => {
+  const res = await api("DELETE", `/api/categories/${catTreeId}`, { cookie: adminCookie });
+  assert.equal(res.status, 409);
+  assert.match((await res.json()).error, /仍有商品/);
+
+  const cats = await (await api("GET", "/api/categories?all=1", { cookie: adminCookie })).json();
+  assert.ok(cats.some((c) => c.id === catTreeId), "blocked delete must keep the category");
 });
 
 // ── 登出 ──
