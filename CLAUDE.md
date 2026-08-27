@@ -43,6 +43,7 @@ npm run build    # 生產構建（含 tsc -b）
 - `src/routes/products.ts` — `GET /api/products`（query: `page`, `pageSize`(上限50), `q` 搜尋, `category`, `sort`= newest|price_asc|price_desc）、`GET /api/products/:id`、`POST/PUT/DELETE` 需 admin 認證
 - `src/routes/categories.ts` — `GET /api/categories`（公開，附 `product_count`）、`POST/PUT/DELETE` 需 admin 認證
 - `src/routes/uploads.ts` — `POST /api/uploads`（上傳圖片，存於 `data/uploads/`，最多 5MB）；提供 `retireUploadedImage()` 在刪除商品時將圖片移至 `data/uploads-deleted/`
+- `src/routes/stats.ts` — `POST /api/stats/heartbeat`（寫入/更新 `visit_stats` 表，visitor_id 為 localStorage UUID）、`GET /api/stats/visits`（回傳 online/today/week/month/total，均為公開端點）
 - `src/index.ts` — 掛載所有路由、`/api/admin/login`、`/api/admin/logout`
 
 SQL 動態組 WHERE 子句時一律用 named parameters（`@q`），排序子句從白名單 `SORTS` map 取用，不可直接拼接使用者輸入。
@@ -53,3 +54,6 @@ SQL 動態組 WHERE 子句時一律用 named parameters（`@q`），排序子句
 - API 封裝集中在 `src/api/client.ts`，型別在 `src/types.ts`，需與 server 回傳欄位對齊
 - 樣式為單一 `src/index.css`（純 CSS，CSS variables 定義色彩 token），不使用 UI 框架
 - 路由：`/`（商品列表）、`/products/:id`（商品詳情）、`/admin`（商品管理）、`/admin/categories`（分類管理）；`/admin` 頁面內自動檢查登入狀態並導向登入表單
+- `checkAdminAuth()` 的實作是用 `POST /api/products` 探測：401 = 未登入、400（其他驗證錯誤）= 已登入，非常規手法，勿誤改
+- Modal 元件（`src/components/Modal.tsx`）只能透過右上角「×」按鈕關閉，不支援點擊背景或 Escape 鍵關閉——這是刻意設計，不要重新加入這兩種關閉方式
+- 進站統計：前台頁面 mount 時呼叫 `sendHeartbeat()`（帶 localStorage visitor UUID），後台 `VisitStatsPanel` 每分鐘 poll `GET /api/stats/visits`

@@ -17,6 +17,7 @@ import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { Pagination } from "../components/Pagination";
 import { VisitStatsPanel } from "../components/VisitStatsPanel";
+import { Logo } from "../components/Logo";
 
 const PAGE_SIZE = 20;
 
@@ -233,7 +234,7 @@ function AdminPage() {
     <div className="admin">
       <header className="header">
         <Link to="/" className="logo-link">
-          常吉園藝 · 後台管理
+          <Logo /> · 後台管理
         </Link>
         <div className="header-actions">
           <button className="btn" onClick={() => navigate("/admin/categories")}>
@@ -371,34 +372,37 @@ function AdminPage() {
           onClose={() => setEditingId(null)}
         >
           <form className="product-form" onSubmit={handleSave}>
+            <div className="form-body">
             <fieldset className="form-section">
               <legend>基本資料</legend>
-              <label>
-                <span className="label-text">名稱 <span className="required">*</span></span>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                  autoFocus
-                />
-              </label>
-              <label>
-                <span className="label-text">分類 <span className="required">*</span></span>
-                <select
-                  value={form.category_id}
-                  onChange={(e) => setForm({ ...form, category_id: Number(e.target.value) })}
-                >
-                  <option value={0} disabled>
-                    請選擇
-                  </option>
-                  {formCategoryOptions.map((c) => (
-                    <option key={c.id} value={c.id} disabled={c.is_active === 0}>
-                      {c.name}
-                      {c.is_active === 0 ? "（已下架，請至分類管理啟用）" : ""}
+              <div className="form-grid">
+                <label>
+                  <span className="label-text">名稱 <span className="required">*</span></span>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                    autoFocus
+                  />
+                </label>
+                <label>
+                  <span className="label-text">分類 <span className="required">*</span></span>
+                  <select
+                    value={form.category_id}
+                    onChange={(e) => setForm({ ...form, category_id: Number(e.target.value) })}
+                  >
+                    <option value={0} disabled>
+                      請選擇
                     </option>
-                  ))}
-                </select>
-              </label>
+                    {formCategoryOptions.map((c) => (
+                      <option key={c.id} value={c.id} disabled={c.is_active === 0}>
+                        {c.name}
+                        {c.is_active === 0 ? "（已下架，請至分類管理啟用）" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </fieldset>
 
             <fieldset className="form-section">
@@ -446,27 +450,31 @@ function AdminPage() {
                     onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
                   />
                 </label>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={form.is_active}
-                    onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                  />
-                  <span>上架中（取消勾選＝下架，前台不顯示）</span>
+                <label>
+                  <span className="label-text">狀態</span>
+                  <span className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={form.is_active}
+                      onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                    />
+                    <span>上架中</span>
+                  </span>
+                  <span className="field-hint">取消勾選則前台不顯示</span>
                 </label>
               </div>
             </fieldset>
 
             <fieldset className="form-section">
               <legend>商品圖片</legend>
-              <div className="form-grid">
-                <label className="full-width">
+              <div className="form-grid form-grid-upload">
+                <label>
                   <span className="label-text">圖片網址</span>
                   <div className="input-with-btn">
                     <input
                       value={form.image_url}
-                      onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                      placeholder="https://… 或直接上傳下方檔案"
+                      readOnly
+                      placeholder="請使用下方上傳"
                     />
                     {form.image_url && (
                       <button
@@ -474,48 +482,51 @@ function AdminPage() {
                         className="btn small danger"
                         onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
                       >
-                        移除圖片
+                        移除
                       </button>
                     )}
                   </div>
                 </label>
-                <label className="full-width">
+                <label>
                   <span className="label-text">上傳圖片</span>
                   <div className="upload-area">
                     <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleImageUpload} disabled={uploading} />
                     {uploading && <span className="uploading-hint">上傳中…</span>}
-                    <p className="upload-hint">支援 JPG / PNG / WebP / GIF，最大 5MB</p>
+                    <p className="upload-hint">JPG / PNG / WebP / GIF，最大 5MB</p>
                   </div>
-                  {form.image_url.startsWith("/api/uploads/") && (
-                    <img src={form.image_url} alt="預覽" className="upload-preview" />
-                  )}
                 </label>
               </div>
+              {form.image_url.startsWith("/api/uploads/") && (
+                <img src={form.image_url} alt="預覽" className="upload-preview" />
+              )}
             </fieldset>
 
             <fieldset className="form-section">
               <legend>詳細內容</legend>
-              <label>
-                <span className="label-text">描述</span>
-                <textarea
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="商品詳細描述…"
-                />
-              </label>
-              <label>
-                <span className="label-text">規格（每行一項）</span>
-                <textarea
-                  rows={4}
-                  value={form.specs}
-                  onChange={(e) => setForm({ ...form, specs: e.target.value })}
-                  placeholder="例：材質：陶瓷&#10;尺寸：直徑 12cm × 高 10cm&#10;顏色：霧面白"
-                />
-              </label>
+              <div className="form-grid form-grid-tall">
+                <label>
+                  <span className="label-text">描述</span>
+                  <textarea
+                    rows={2}
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="商品詳細描述…"
+                  />
+                </label>
+                <label>
+                  <span className="label-text">規格（每行一項）</span>
+                  <textarea
+                    rows={2}
+                    value={form.specs}
+                    onChange={(e) => setForm({ ...form, specs: e.target.value })}
+                    placeholder="例：材質：陶瓷&#10;尺寸：直徑 12cm × 高 10cm"
+                  />
+                </label>
+              </div>
             </fieldset>
 
             {formError && <p className="status error">{formError}</p>}
+            </div>
             <div className="form-actions">
               <button type="button" className="btn" onClick={() => setEditingId(null)}>
                 取消
