@@ -457,6 +457,15 @@ function AdminPage() {
                 onChange={(e) => setForm({ ...form, image_url: e.target.value })}
                 placeholder="https://… 或直接上傳下方檔案"
               />
+              {form.image_url && (
+                <button
+                  type="button"
+                  className="btn small danger"
+                  onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
+                >
+                  移除圖片
+                </button>
+              )}
             </label>
             <label>
               上傳圖片（JPG / PNG / WebP / GIF，最大 5MB）
