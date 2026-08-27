@@ -586,3 +586,55 @@ test("POST /api/admin/logout 回傳 ok 並設定過期 cookie（client 端登出
   const setCookie = res.headers.getSetCookie().find((c) => c.startsWith("admin_token="));
   assert.ok(setCookie?.includes("Max-Age=0"));
 });
+
+// ── 進站統計（stats heartbeat / visits）──
+
+test("POST /api/stats/heartbeat 新 visitorId → 200 { ok: true }", async () => {
+  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-aaa" } });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true });
+});
+
+test("POST /api/stats/heartbeat 重複 visitorId → 200（UPDATE，不重複計算）", async () => {
+  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-aaa" } });
+  assert.equal(res.status, 200);
+});
+
+test("POST /api/stats/heartbeat visitorId 缺少或空字串 → 400", async () => {
+  const noId = await api("POST", "/api/stats/heartbeat", { json: {} });
+  assert.equal(noId.status, 400);
+
+  const empty = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "" } });
+  assert.equal(empty.status, 400);
+});
+
+test("POST /api/stats/heartbeat visitorId 超過 64 字元 → 400", async () => {
+  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "x".repeat(65) } });
+  assert.equal(res.status, 400);
+});
+
+test("GET /api/stats/visits 回傳 { online, today, week, month, total } 結構", async () => {
+  // 先發幾筆 heartbeat（aaa 已存在，再加 bbb、ccc）
+  await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-bbb" } });
+  await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-ccc" } });
+
+  const res = await api("GET", "/api/stats/visits");
+  assert.equal(res.status, 200);
+  const data = await res.json();
+
+  for (const key of ["online", "today", "week", "month", "total"]) {
+    assert.ok(typeof data[key] === "number" && data[key] >= 0, `${key} must be a non-negative number`);
+  }
+  // 3 個不同 visitorId 都在本日，total 至少 3
+  assert.ok(data.total >= 3);
+  assert.ok(data.today >= 3);
+  assert.ok(data.online >= 3, "all heartbeats are recent, should be counted as online");
+});
+
+test("GET /api/stats/visits 重複 visitor 只計一次", async () => {
+  // aaa 已送過多次 heartbeat，仍只算一個 unique visitor
+  const res = await api("GET", "/api/stats/visits");
+  const { total } = await res.json();
+  // total 應是 3（aaa, bbb, ccc），不因重送而膨脹
+  assert.equal(total, 3);
+});

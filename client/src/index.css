@@ -150,6 +150,10 @@ img {
   padding: 2rem 1.5rem;
 }
 
+.sidebar {
+  font-weight: 700;
+}
+
 .sidebar h2 {
   font-size: 0.75rem;
   text-transform: uppercase;
