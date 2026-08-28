@@ -6,6 +6,7 @@ const POLL_INTERVAL_MS = 60 * 1000;
 
 export function VisitStatsPanel() {
   const [stats, setStats] = useState<VisitStats | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,8 +37,25 @@ export function VisitStatsPanel() {
   ];
 
   return (
-    <section className="visit-stats-panel" aria-label="進站統計">
-      <h2>進站統計</h2>
+    <section className={`visit-stats-panel ${isOpen ? "open" : ""}`} aria-label="進站統計">
+      <button
+        type="button"
+        className="visit-stats-header"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+      >
+        <span className="visit-stats-title">
+          <span className="visit-stats-icon">📊</span>
+          <span>進站統計</span>
+          <span className="visit-stats-summary">
+            今日 <strong>{stats?.today ?? "—"}</strong>
+          </span>
+        </span>
+        <span className="visit-stats-toggle" aria-hidden="true">
+          {isOpen ? "收合 ▲" : "展開 ▼"}
+        </span>
+      </button>
+
       <div className="stats-grid">
         {items.map((item) => (
           <div className="stat-card" key={item.label}>

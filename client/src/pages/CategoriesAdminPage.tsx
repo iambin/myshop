@@ -194,12 +194,12 @@ function CategoriesAdminPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6}>載入中…</td>
+                <td colSpan={6} className="table-empty-cell">載入中…</td>
               </tr>
             )}
             {!loading && categories.length === 0 && (
               <tr>
-                <td colSpan={6}>查無資料</td>
+                <td colSpan={6} className="table-empty-cell">查無資料</td>
               </tr>
             )}
             {!loading &&
@@ -207,14 +207,14 @@ function CategoriesAdminPage() {
                 const st = categoryStatus(c);
                 return (
                   <tr key={c.id} className={st.cls === "on" ? "" : "row-inactive"}>
-                    <td>{c.id}</td>
-                    <td>{c.name}</td>
-                    <td>{c.active_product_count}</td>
-                    <td>{c.sort_order}</td>
-                    <td>
+                    <td data-label="ID">{c.id}</td>
+                    <td data-label="名稱" className="cell-primary-text">{c.name}</td>
+                    <td data-label="上架商品數">{c.active_product_count}</td>
+                    <td data-label="排序">{c.sort_order}</td>
+                    <td data-label="狀態">
                       <span className={`badge ${st.cls}`}>{st.label}</span>
                     </td>
-                    <td className="row-actions">
+                    <td data-label="操作" className="row-actions">
                       <button className="btn small" onClick={() => openEdit(c)}>
                         編輯
                       </button>

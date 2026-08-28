@@ -317,29 +317,29 @@ function AdminPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={8}>載入中…</td>
+                <td colSpan={8} className="table-empty-cell">載入中…</td>
               </tr>
             )}
             {!loading && products.length === 0 && (
               <tr>
-                <td colSpan={8}>查無資料</td>
+                <td colSpan={8} className="table-empty-cell">查無資料</td>
               </tr>
             )}
             {!loading &&
               products.map((p) => (
                 <tr key={p.id} className={p.is_active ? "" : "row-inactive"}>
-                  <td>{p.id}</td>
-                  <td>{p.name}</td>
-                  <td>{p.category_name}</td>
-                  <td>{formatPrice(p.price)}</td>
-                  <td>{p.stock}</td>
-                  <td>{p.sort_order}</td>
-                  <td>
+                  <td data-label="ID">{p.id}</td>
+                  <td data-label="名稱" className="cell-primary-text">{p.name}</td>
+                  <td data-label="分類">{p.category_name}</td>
+                  <td data-label="價格">{formatPrice(p.price)}</td>
+                  <td data-label="庫存">{p.stock}</td>
+                  <td data-label="排序">{p.sort_order}</td>
+                  <td data-label="狀態">
                     <span className={p.is_active ? "badge on" : "badge off"}>
                       {p.is_active ? "上架" : "下架"}
                     </span>
                   </td>
-                  <td className="row-actions">
+                  <td data-label="操作" className="row-actions">
                     <button className="btn small" onClick={() => openEdit(p)}>
                       編輯
                     </button>
