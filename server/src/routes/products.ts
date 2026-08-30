@@ -189,8 +189,14 @@ function handleList(
   const params: Record<string, unknown> = {};
   if (!includeInactive) where.push("p.is_active = 1");
   if (q) {
-    where.push("(p.name LIKE @q OR p.description LIKE @q)");
-    params.q = `%${q}%`;
+    const terms = q.split(/\s+/).filter(Boolean);
+    terms.forEach((term, index) => {
+      const paramKey = `q_${index}`;
+      where.push(
+        `(p.name LIKE @${paramKey} OR c.name LIKE @${paramKey} OR p.description LIKE @${paramKey} OR p.specs LIKE @${paramKey})`
+      );
+      params[paramKey] = `%${term}%`;
+    });
   }
   if (category) {
     where.push("c.name = @category");

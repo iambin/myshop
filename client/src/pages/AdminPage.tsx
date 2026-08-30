@@ -21,10 +21,12 @@ import { Logo } from "../components/Logo";
 
 const PAGE_SIZE = 20;
 
+const DEFAULT_SPECS = "品名：\n高度：\n寬度：\n容器：\n";
+
 const EMPTY_FORM = {
   name: "",
   description: "",
-  specs: "",
+  specs: DEFAULT_SPECS,
   price: "0",
   image_url: "",
   stock: "0",
@@ -270,7 +272,7 @@ function AdminPage() {
           >
             <input
               type="search"
-              placeholder="搜尋商品名稱…"
+              placeholder="搜尋商品、分類或規格…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
@@ -362,7 +364,10 @@ function AdminPage() {
           page={page}
           pageSize={PAGE_SIZE}
           total={total}
-          onChange={(p) => updateParams({ page: String(p) })}
+          onChange={(p) => {
+            updateParams({ page: String(p) });
+            document.getElementById("root")?.scrollIntoView({ behavior: "smooth" });
+          }}
         />
       </main>
 
@@ -516,10 +521,10 @@ function AdminPage() {
                 <label>
                   <span className="label-text">規格（每行一項）</span>
                   <textarea
-                    rows={2}
+                    rows={4}
                     value={form.specs}
                     onChange={(e) => setForm({ ...form, specs: e.target.value })}
-                    placeholder="例：材質：陶瓷&#10;尺寸：直徑 12cm × 高 10cm"
+                    placeholder="例：品名：&#10;高度：&#10;寬度：&#10;容器："
                   />
                 </label>
               </div>

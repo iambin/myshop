@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchProducts } from "../api/client";
 import type { Product } from "../types";
 import { ProductCard } from "../components/ProductCard";
 import { Pagination } from "../components/Pagination";
 import { Logo } from "../components/Logo";
+import { ProductDetailModal } from "../components/ProductDetailModal";
 
 const PAGE_SIZE = 12;
 const SORT_OPTIONS = [
@@ -26,7 +27,10 @@ export function HomePage() {
   const q = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? "";
   const sort = searchParams.get("sort") ?? "default";
+  const selectedProductId = searchParams.get("product");
   const [searchInput, setSearchInput] = useState(q);
+  const categoryListRef = useRef<HTMLUListElement>(null);
+  const manyCategories = categories.length > 8;
 
   useEffect(() => {
     fetch("/api/categories")
@@ -34,6 +38,17 @@ export function HomePage() {
       .then((data) => setCategories(data.map((c: { name: string }) => c.name)))
       .catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!manyCategories) return;
+    const list = categoryListRef.current;
+    const active = list?.querySelector<HTMLButtonElement>("button.active");
+    if (!list || !active) return;
+    const listRect = list.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const left = list.scrollLeft + (activeRect.left - listRect.left) - list.clientWidth / 2 + activeRect.width / 2;
+    list.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+  }, [category, manyCategories]);
 
   useEffect(() => {
     setLoading(true);
@@ -73,7 +88,7 @@ export function HomePage() {
         >
           <input
             type="search"
-            placeholder="搜尋商品…"
+            placeholder="搜尋商品、分類或規格…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -82,9 +97,9 @@ export function HomePage() {
       </header>
 
       <div className="layout">
-        <aside className="sidebar">
+        <aside className={manyCategories ? "sidebar sidebar-many" : "sidebar"}>
           <h2>商品分類</h2>
-          <ul>
+          <ul ref={categoryListRef}>
             <li>
               <button className={!category ? "active" : ""} onClick={() => updateParams({ category: null, page: null })}>
                 全部
@@ -123,13 +138,32 @@ export function HomePage() {
 
           <div className="product-grid">
             {products.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard
+                key={p.id}
+                product={p}
+                onClick={() => updateParams({ product: String(p.id) })}
+              />
             ))}
           </div>
 
-          <Pagination page={page} pageSize={PAGE_SIZE} total={total} onChange={(page) => updateParams({ page: String(page) })} />
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            onChange={(page) => {
+              updateParams({ page: String(page) });
+              document.getElementById("root")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
         </main>
       </div>
+
+      {selectedProductId && (
+        <ProductDetailModal
+          productId={selectedProductId}
+          onClose={() => updateParams({ product: null })}
+        />
+      )}
     </div>
   );
 }

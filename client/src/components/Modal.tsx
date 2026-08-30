@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 interface ModalProps {
   title: string;
   onClose: () => void;
@@ -5,6 +7,14 @@ interface ModalProps {
 }
 
 function Modal({ title, onClose, children }: ModalProps) {
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   return (
     <div className="modal-overlay">
       <div

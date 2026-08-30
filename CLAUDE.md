@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 注意事項
+
+- 每次改動完成後，都必須創建一個對應的Git commit，以便後續追蹤和回滾。
+- 每次改動後，都必須編寫或更新相關測試，並在交付給用戶前，確保所有測試和驗證全部通過。
+- 本次session context 快要滿(約80%),請提我。
+
 ## 專案概觀
 
 電商前台商城（商品瀏覽、搜尋與後台管理），前後端分離的單一 repo：

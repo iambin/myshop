@@ -1,10 +1,25 @@
-import { Link } from "react-router-dom";
 import type { Product } from "../types";
 import { formatPrice } from "../utils/format";
 
-export function ProductCard({ product }: { product: Product }) {
+interface ProductCardProps {
+  product: Product;
+  onClick: () => void;
+}
+
+export function ProductCard({ product, onClick }: ProductCardProps) {
   return (
-    <Link to={`/products/${product.id}`} className="product-card">
+    <div
+      role="button"
+      tabIndex={0}
+      className="product-card"
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <img src={product.image_url ?? ""} alt={product.name} loading="lazy" />
       <div className="product-card-body">
         <span className="product-category">{product.category_name}</span>
@@ -12,6 +27,6 @@ export function ProductCard({ product }: { product: Product }) {
         <p className="product-price">{formatPrice(product.price)}</p>
         {product.stock === 0 && <span className="out-of-stock">已售完</span>}
       </div>
-    </Link>
+    </div>
   );
 }

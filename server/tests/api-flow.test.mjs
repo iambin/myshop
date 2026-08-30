@@ -284,7 +284,7 @@ test("sort=price_asc 由便宜到貴", async () => {
   );
 });
 
-test("q 搜尋命中名稱或描述", async () => {
+test("q 搜尋命中名稱或描述，以及類別+品名多詞組合搜尋", async () => {
   const data = await (await api("GET", "/api/products?q=%E7%8E%AB%E7%91%B0")).json(); // 玫瑰
   assert.equal(data.total, 1);
   assert.equal(data.items[0].name, "玫瑰盆栽");
@@ -292,6 +292,16 @@ test("q 搜尋命中名稱或描述", async () => {
   const descHit = await (await api("GET", "/api/products?q=%E9%96%8B%E8%8A%B1")).json(); // 開花
   assert.equal(descHit.total, 1);
   assert.equal(descHit.items[0].name, "桂花樹");
+
+  // 類別「測試樹木」 + 品名「桂花」組合搜尋
+  const multiTermHit = await (await api("GET", `/api/products?q=${encodeURIComponent("測試樹木 桂花")}`)).json();
+  assert.equal(multiTermHit.total, 1);
+  assert.equal(multiTermHit.items[0].name, "桂花樹");
+
+  // 順序相反「桂花 測試樹木」依然命中
+  const reverseTermHit = await (await api("GET", `/api/products?q=${encodeURIComponent("桂花 測試樹木")}`)).json();
+  assert.equal(reverseTermHit.total, 1);
+  assert.equal(reverseTermHit.items[0].name, "桂花樹");
 });
 
 test("category 篩選只回該分類商品", async () => {
