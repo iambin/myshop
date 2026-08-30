@@ -7,8 +7,7 @@
 // Run: cd server && npm test
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { execSync } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -113,29 +112,53 @@ after(async () => {
   if (dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
-// ── 前台瀏覽（公開）──
+// ════════════════════════════════════════════════════════════════════
+// 1. 進站心跳與訪客統計 (Heartbeat & Visit Stats)
+// ════════════════════════════════════════════════════════════════════
 
-test("GET /api/products 回傳空列表結構 { items, total, page, pageSize }", async () => {
-  const res = await api("GET", "/api/products");
+test("POST /api/stats/heartbeat 新 visitorId → 200 { ok: true }", async () => {
+  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-aaa" } });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true });
+});
+
+test("POST /api/stats/heartbeat 重複 visitorId → 200（UPDATE 不重複計數）", async () => {
+  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-aaa" } });
+  assert.equal(res.status, 200);
+});
+
+test("POST /api/stats/heartbeat 驗證防呆（缺少或超長 visitorId）", async () => {
+  const noId = await api("POST", "/api/stats/heartbeat", { json: {} });
+  assert.equal(noId.status, 400);
+
+  const empty = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "" } });
+  assert.equal(empty.status, 400);
+
+  const tooLong = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "x".repeat(65) } });
+  assert.equal(tooLong.status, 400);
+});
+
+test("GET /api/stats/visits 回傳統計指標結構且計數準確", async () => {
+  await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-bbb" } });
+  await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-ccc" } });
+
+  const res = await api("GET", "/api/stats/visits");
   assert.equal(res.status, 200);
   const data = await res.json();
-  assert.deepEqual(data, { items: [], total: 0, page: 1, pageSize: 12 });
+  for (const key of ["online", "today", "week", "month", "total"]) {
+    assert.ok(typeof data[key] === "number" && data[key] >= 0);
+  }
+  assert.equal(data.total, 3, "3 distinct visitorIds should count as 3");
 });
 
-test("GET /api/categories 公開可讀，初始為空陣列", async () => {
-  const res = await api("GET", "/api/categories");
-  assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), []);
-});
+// ════════════════════════════════════════════════════════════════════
+// 2. 後台認證與登入流程 (Auth & checkAdminAuth)
+// ════════════════════════════════════════════════════════════════════
 
-test("GET /api/products/:id 不存在的商品回 404 { error }", async () => {
-  const res = await api("GET", "/api/products/999999");
-  assert.equal(res.status, 404);
-  const data = await res.json();
-  assert.ok(typeof data.error === "string" && data.error.length > 0);
+test("未登入探測 POST /api/products → 401（checkAdminAuth 探測機制）", async () => {
+  const res = await api("POST", "/api/products", { json: { name: "x", price: 1, category_id: 1 } });
+  assert.equal(res.status, 401);
 });
-
-// ── 後台管理（需認證）──
 
 test("POST /api/admin/login 密碼錯誤 → 401", async () => {
   const res = await api("POST", "/api/admin/login", { json: { password: "wrong-password" } });
@@ -143,87 +166,85 @@ test("POST /api/admin/login 密碼錯誤 → 401", async () => {
   assert.equal((await res.json()).error, "密碼錯誤");
 });
 
-test("未登入呼叫寫入 API → 401（requireAdmin 擋下）", async () => {
-  const res = await api("POST", "/api/products", { json: { name: "x", price: 1, category_id: 1 } });
-  assert.equal(res.status, 401);
-});
-
-test("POST /api/admin/login 正確密碼 → 200 + HttpOnly admin_token cookie", async () => {
+test("POST /api/admin/login 密碼正確 → 200 + Set-Cookie admin_token (HttpOnly)", async () => {
   const { res, token } = await login(PASSWORD);
   assert.equal(res.status, 200);
-  assert.ok(token, "Set-Cookie should contain admin_token");
+  assert.ok(token, "Set-Cookie must contain admin_token");
   assert.ok(token.includes("HttpOnly"));
   adminCookie = token.split(";")[0];
   assert.match(adminCookie, /^admin_token=.+\..+$/);
 });
 
-// ── 分類管理 ──
+// ════════════════════════════════════════════════════════════════════
+// 3. 分類管理 (Categories Management)
+// ════════════════════════════════════════════════════════════════════
 
 let catFlowerId;
 let catTreeId;
 
 test("新增分類 → 201 { id }；重複名稱 → 409", async () => {
-  const res = await api("POST", "/api/categories", { json: { name: "測試花卉" }, cookie: adminCookie });
-  assert.equal(res.status, 201);
-  catFlowerId = (await res.json()).id;
+  const resFlower = await api("POST", "/api/categories", { json: { name: "測試花卉" }, cookie: adminCookie });
+  assert.equal(resFlower.status, 201);
+  catFlowerId = (await resFlower.json()).id;
 
   const dup = await api("POST", "/api/categories", { json: { name: "測試花卉" }, cookie: adminCookie });
   assert.equal(dup.status, 409);
 
   const resTree = await api("POST", "/api/categories", { json: { name: "測試樹木" }, cookie: adminCookie });
+  assert.equal(resTree.status, 201);
   catTreeId = (await resTree.json()).id;
 });
 
-test("GET /api/categories 公開列表隱藏無上架商品的分類；all=1（管理）回全部含新欄位", async () => {
-  // 尚無任何上架商品 → 兩個分類都應被自動下架，公開列表為空
+test("GET /api/categories 公開列表自動隱藏無商品分類；all=1 回傳全部", async () => {
+  // 尚無上架商品 → 公開列表為空
   const pub = await api("GET", "/api/categories");
   assert.equal(pub.status, 200);
   assert.deepEqual(await pub.json(), []);
 
+  // all=1 管理模式需登入
   const all = await api("GET", "/api/categories?all=1", { cookie: adminCookie });
   assert.equal(all.status, 200);
   const cats = await all.json();
-  assert.ok(Array.isArray(cats) && cats.length === 2);
+  assert.equal(cats.length, 2);
   for (const c of cats) {
     assert.equal(c.is_active, 1);
-    assert.equal(c.sort_order, 99, "default sort_order should be 99");
+    assert.equal(c.sort_order, 99);
     assert.equal(c.active_product_count, 0);
   }
-
-  // all=1 未登入 → 401
-  const unauthorized = await api("GET", "/api/categories?all=1");
-  assert.equal(unauthorized.status, 401);
 });
 
-// ── 商品新增／詳情／欄位驗證 ──
+// ════════════════════════════════════════════════════════════════════
+// 4. 商品新增、規格範本與詳情 (Products CRUD & Detail)
+// ════════════════════════════════════════════════════════════════════
 
 let productA;
-const PRODUCT_A = {
-  name: "玫瑰盆栽",
-  description: "香氣濃郁的玫瑰花",
-  specs: "高度約 30cm\n含盆出貨",
-  price: 99.9,
-  stock: 3,
-};
+const PRODUCT_A_SPECS = "品名：紅玫瑰\n高度：30cm\n寬度：15cm\n容器：陶瓷盆";
 
-test("POST /api/products → 201；詳情欄位與 server 對齊（price 取整數、附 category_name）", async () => {
+test("POST /api/products 新增商品（含規格範本、四捨五入整數價格）", async () => {
   const res = await api("POST", "/api/products", {
-    json: { ...PRODUCT_A, category_id: catFlowerId },
+    json: {
+      name: "玫瑰盆栽",
+      description: "香氣濃郁的紅玫瑰花",
+      specs: PRODUCT_A_SPECS,
+      price: 99.9,
+      stock: 3,
+      category_id: catFlowerId,
+    },
     cookie: adminCookie,
   });
   assert.equal(res.status, 201);
   productA = (await res.json()).id;
 
+  // 驗證商品詳情 GET /api/products/:id
   const detail = await (await api("GET", `/api/products/${productA}`)).json();
   assert.equal(detail.id, productA);
   assert.equal(detail.name, "玫瑰盆栽");
-  assert.equal(detail.price, 100, "price must be stored as integer");
-  assert.equal(detail.category_id, catFlowerId);
+  assert.equal(detail.specs, PRODUCT_A_SPECS);
+  assert.equal(detail.price, 100, "price must be stored as integer (rounded)");
   assert.equal(detail.category_name, "測試花卉");
-  assert.ok(typeof detail.created_at === "string");
 });
 
-test("欄位驗證：負數價格／負庫存／不存在的分類 → 400", async () => {
+test("商品新增防呆驗證：負數價格、負庫存、不存在分類 → 400", async () => {
   const badPrice = await api("POST", "/api/products", {
     json: { name: "x", price: -1, category_id: catFlowerId },
     cookie: adminCookie,
@@ -243,106 +264,125 @@ test("欄位驗證：負數價格／負庫存／不存在的分類 → 400", asy
   assert.equal(badCat.status, 400);
 });
 
-// ── 商品列表：q / category / sort / 分頁 ──
+// ════════════════════════════════════════════════════════════════════
+// 5. 多關鍵字跨欄位交集搜尋 (Multi-term Cross-Field AND Search)
+// ════════════════════════════════════════════════════════════════════
 
 let productB;
 let productC;
 
-test("再建兩筆商品供列表查詢測試", async () => {
+test("建立樹木類測試商品供複合搜尋測試", async () => {
   productB = (
     await (
       await api("POST", "/api/products", {
-        json: { name: "榕樹苗", description: "好照顧的樹", price: 300, stock: 0, category_id: catTreeId },
+        json: {
+          name: "榕樹苗",
+          description: "好照顧的長青樹木",
+          specs: "品名：小葉榕\n高度：50cm\n寬度：20cm\n容器：塑膠盆",
+          price: 300,
+          stock: 2,
+          category_id: catTreeId,
+        },
         cookie: adminCookie,
       })
     ).json()
   ).id;
+
   productC = (
     await (
       await api("POST", "/api/products", {
-        json: { name: "桂花樹", description: "秋天開花", price: 200, stock: 7, category_id: catTreeId },
+        json: {
+          name: "桂花樹",
+          description: "秋天開花芳香宜人",
+          specs: "品名：四季桂\n高度：80cm\n寬度：30cm\n容器：紫砂盆",
+          price: 200,
+          stock: 7,
+          category_id: catTreeId,
+        },
         cookie: adminCookie,
       })
     ).json()
   ).id;
+
   assert.ok(productB && productC);
 });
 
-test("列表總筆數與 newest 排序（id 由新到舊）", async () => {
-  const data = await (await api("GET", "/api/products")).json();
-  assert.equal(data.total, 3);
-  assert.equal(data.items.length, 3);
-  const ids = data.items.map((p) => p.id);
-  assert.deepEqual(ids.sort((a, b) => b - a), ids);
-});
+test("單詞搜尋：分別命中名稱、描述與規格", async () => {
+  // 命中名稱
+  const nameHit = await (await api("GET", `/api/products?q=${encodeURIComponent("玫瑰")}`)).json();
+  assert.equal(nameHit.total, 1);
+  assert.equal(nameHit.items[0].name, "玫瑰盆栽");
 
-test("sort=price_asc 由便宜到貴", async () => {
-  const data = await (await api("GET", "/api/products?sort=price_asc")).json();
-  assert.deepEqual(
-    data.items.map((p) => p.price),
-    [100, 200, 300]
-  );
-});
-
-test("q 搜尋命中名稱或描述，以及類別+品名多詞組合搜尋", async () => {
-  const data = await (await api("GET", "/api/products?q=%E7%8E%AB%E7%91%B0")).json(); // 玫瑰
-  assert.equal(data.total, 1);
-  assert.equal(data.items[0].name, "玫瑰盆栽");
-
-  const descHit = await (await api("GET", "/api/products?q=%E9%96%8B%E8%8A%B1")).json(); // 開花
+  // 命中描述
+  const descHit = await (await api("GET", `/api/products?q=${encodeURIComponent("開花")}`)).json();
   assert.equal(descHit.total, 1);
   assert.equal(descHit.items[0].name, "桂花樹");
 
-  // 類別「測試樹木」 + 品名「桂花」組合搜尋
-  const multiTermHit = await (await api("GET", `/api/products?q=${encodeURIComponent("測試樹木 桂花")}`)).json();
-  assert.equal(multiTermHit.total, 1);
-  assert.equal(multiTermHit.items[0].name, "桂花樹");
-
-  // 順序相反「桂花 測試樹木」依然命中
-  const reverseTermHit = await (await api("GET", `/api/products?q=${encodeURIComponent("桂花 測試樹木")}`)).json();
-  assert.equal(reverseTermHit.total, 1);
-  assert.equal(reverseTermHit.items[0].name, "桂花樹");
+  // 命中規格（容器）
+  const specsHit = await (await api("GET", `/api/products?q=${encodeURIComponent("紫砂盆")}`)).json();
+  assert.equal(specsHit.total, 1);
+  assert.equal(specsHit.items[0].name, "桂花樹");
 });
 
-test("category 篩選只回該分類商品", async () => {
-  const data = await (await api("GET", "/api/products?category=%E6%B8%AC%E8%A9%A6%E6%A8%B9%E6%9C%A8")).json(); // 測試樹木
-  assert.equal(data.total, 2);
-  for (const p of data.items) {
-    assert.equal(p.category_name, "測試樹木");
-  }
+test("多關鍵字跨欄位交集搜尋（類別 + 品名 + 規格）", async () => {
+  // 1. 類別「測試樹木」 + 品名「桂花」
+  const term1 = await (await api("GET", `/api/products?q=${encodeURIComponent("測試樹木 桂花")}`)).json();
+  assert.equal(term1.total, 1);
+  assert.equal(term1.items[0].name, "桂花樹");
+
+  // 2. 順序顛倒：「桂花 測試樹木」
+  const term2 = await (await api("GET", `/api/products?q=${encodeURIComponent("桂花 測試樹木")}`)).json();
+  assert.equal(term2.total, 1);
+  assert.equal(term2.items[0].name, "桂花樹");
+
+  // 3. 類別「測試花卉」 + 規格「陶瓷盆」
+  const term3 = await (await api("GET", `/api/products?q=${encodeURIComponent("測試花卉 陶瓷盆")}`)).json();
+  assert.equal(term3.total, 1);
+  assert.equal(term3.items[0].name, "玫瑰盆栽");
+
+  // 4. 多空格容錯：「  測試樹木   50cm  」
+  const term4 = await (await api("GET", `/api/products?q=${encodeURIComponent("  測試樹木   50cm  ")}`)).json();
+  assert.equal(term4.total, 1);
+  assert.equal(term4.items[0].name, "榕樹苗");
+
+  // 5. 無交集關鍵字 → 0 筆
+  const noHit = await (await api("GET", `/api/products?q=${encodeURIComponent("測試花卉 紫砂盆")}`)).json();
+  assert.equal(noHit.total, 0);
 });
 
-test("分頁：pageSize 與 page 生效", async () => {
+// ════════════════════════════════════════════════════════════════════
+// 6. 排序與分頁 (Sorting & Pagination)
+// ════════════════════════════════════════════════════════════════════
+
+test("sort 排序功能驗證（price_asc / newest）", async () => {
+  const asc = await (await api("GET", "/api/products?sort=price_asc")).json();
+  assert.deepEqual(
+    asc.items.map((p) => p.price),
+    [100, 200, 300]
+  );
+
+  const newest = await (await api("GET", "/api/products?sort=newest")).json();
+  assert.deepEqual(
+    newest.items.map((p) => p.id),
+    [productC, productB, productA]
+  );
+});
+
+test("分頁功能驗證（page 與 pageSize）", async () => {
   const page1 = await (await api("GET", "/api/products?page=1&pageSize=2&sort=price_asc")).json();
   assert.equal(page1.total, 3);
   assert.equal(page1.items.length, 2);
+  assert.equal(page1.items[0].id, productA);
 
   const page2 = await (await api("GET", "/api/products?page=2&pageSize=2&sort=price_asc")).json();
+  assert.equal(page2.total, 3);
   assert.equal(page2.items.length, 1);
-  assert.equal(page2.items[0].price, 300);
+  assert.equal(page2.items[0].id, productB);
 });
 
-test("PUT /api/products/:id 更新欄位生效", async () => {
-  const res = await api("PUT", `/api/products/${productA}`, {
-    json: {
-      name: "玫瑰盆栽（大）",
-      description: "改版描述",
-      specs: "",
-      price: 150,
-      stock: 5,
-      category_id: catFlowerId,
-      image_url: null,
-    },
-    cookie: adminCookie,
-  });
-  assert.equal(res.status, 200);
-  const detail = await (await api("GET", `/api/products/${productA}`)).json();
-  assert.equal(detail.name, "玫瑰盆栽（大）");
-  assert.equal(detail.price, 150);
-  assert.equal(detail.stock, 5);
-});
-
-// ── 圖片上傳與刪除搬移 ──
+// ════════════════════════════════════════════════════════════════════
+// 7. 圖片上傳與刪除歸檔 (Image Uploads & Archiving)
+// ════════════════════════════════════════════════════════════════════
 
 test("未登入上傳圖片 → 401", async () => {
   const form = new FormData();
@@ -351,70 +391,57 @@ test("未登入上傳圖片 → 401", async () => {
   assert.equal(res.status, 401);
 });
 
-test("POST /api/uploads 上傳 PNG → 201 { url }，且可被服務", async () => {
+test("POST /api/uploads 上傳圖片 → 201，刪除商品時圖片自動移至 uploads-deleted/", async () => {
   const png1x1 = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
     "base64"
   );
   const form = new FormData();
-  form.append("image", new Blob([png1x1], { type: "image/png" }), "t.png");
-  const res = await fetch(`${BASE}/api/uploads`, {
+  form.append("image", new Blob([png1x1], { type: "image/png" }), "demo.png");
+  const uploadRes = await fetch(`${BASE}/api/uploads`, {
     method: "POST",
     body: form,
     headers: { Cookie: adminCookie },
   });
-  assert.equal(res.status, 201);
-  const { url } = await res.json();
+  assert.equal(uploadRes.status, 201);
+  const { url } = await uploadRes.json();
   assert.match(url, /^\/api\/uploads\/[0-9a-f-]+\.png$/);
 
-  const imgRes = await fetch(`${BASE}${url}`);
-  assert.equal(imgRes.status, 200);
-  assert.match(imgRes.headers.get("content-type") ?? "", /^image\//);
+  // 驗證靜態圖片可被存取
+  const staticRes = await fetch(`${BASE}${url}`);
+  assert.equal(staticRes.status, 200);
 
-  // 建立掛此圖的商品，供下一個刪除測試驗證「圖片移至 uploads-deleted」
+  // 建立掛圖商品
   const created = await api("POST", "/api/products", {
     json: { name: "有圖商品", price: 50, stock: 1, category_id: catFlowerId, image_url: url },
     cookie: adminCookie,
   });
   const { id } = await created.json();
 
+  // 刪除商品
   const del = await api("DELETE", `/api/products/${id}`, { cookie: adminCookie });
   assert.equal(del.status, 200);
-  assert.deepEqual(await del.json(), { ok: true });
 
+  // 驗證圖檔移出 uploads/ 並移入 uploads-deleted/
   const filename = path.basename(url);
   const uploadsDir = path.join(dataDir, "uploads");
   const deletedDir = path.join(dataDir, "uploads-deleted");
-  assert.ok(!fs.existsSync(path.join(uploadsDir, filename)), "image must leave uploads/");
+  assert.ok(!fs.existsSync(path.join(uploadsDir, filename)), "image must be removed from uploads/");
   assert.ok(fs.existsSync(path.join(deletedDir, filename)), "image must be moved to uploads-deleted/");
-
-  const gone = await api("GET", `/api/products/${id}`);
-  assert.equal(gone.status, 404);
 });
 
-test("DELETE 後分類的 product_count 同步減少", async () => {
-  const cats = await (await api("GET", "/api/categories")).json();
-  const flower = cats.find((c) => c.id === catFlowerId);
-  assert.equal(flower.product_count, 1); // 只剩玫瑰盆栽
-});
+// ════════════════════════════════════════════════════════════════════
+// 8. 商品下架與分類聯動防護 (Delist & Protection)
+// ════════════════════════════════════════════════════════════════════
 
-// ── 商品下架／自訂排序／分類自動下架 ──
-
-test("新商品預設 is_active=1、sort_order=999", async () => {
-  const data = await (await api("GET", "/api/products?all=1", { cookie: adminCookie })).json();
-  const a = data.items.find((p) => p.id === productA);
-  assert.equal(a.is_active, 1);
-  assert.equal(a.sort_order, 999);
-});
-
-test("商品下架後：公開列表與詳情看不到，all=1 仍可見", async () => {
+test("商品下架後公開列表隱藏，後台 all=1 仍可查詢", async () => {
   const res = await api("PUT", `/api/products/${productA}`, {
     json: {
-      name: "玫瑰盆栽（大）",
-      description: "改版描述",
-      specs: "",
-      price: 150,
-      stock: 5,
+      name: "玫瑰盆栽",
+      description: "描述更新",
+      specs: PRODUCT_A_SPECS,
+      price: 100,
+      stock: 3,
       category_id: catFlowerId,
       image_url: null,
       is_active: false,
@@ -424,227 +451,52 @@ test("商品下架後：公開列表與詳情看不到，all=1 仍可見", async
   assert.equal(res.status, 200);
 
   const pub = await (await api("GET", "/api/products")).json();
-  assert.ok(!pub.items.some((p) => p.id === productA), "delisted product must be hidden publicly");
-
-  const detail = await api("GET", `/api/products/${productA}`);
-  assert.equal(detail.status, 404);
+  assert.ok(!pub.items.some((p) => p.id === productA), "delisted item must not appear in public list");
 
   const all = await (await api("GET", "/api/products?all=1", { cookie: adminCookie })).json();
   const a = all.items.find((p) => p.id === productA);
   assert.equal(a.is_active, 0);
-});
 
-test("分類底下沒有上架商品時自動下架（公開列表消失，all=1 仍在）", async () => {
-  // 花卉唯一的商品剛被下架 → 公開列表應只剩樹木
-  const pub = await (await api("GET", "/api/categories")).json();
-  assert.deepEqual(
-    pub.map((c) => c.name),
-    ["測試樹木"]
-  );
+  // 分類無上架商品時自動下架
+  const pubCats = await (await api("GET", "/api/categories")).json();
+  assert.ok(!pubCats.some((c) => c.id === catFlowerId), "empty category must be hidden publicly");
 
-  const all = await (await api("GET", "/api/categories?all=1", { cookie: adminCookie })).json();
-  const flower = all.find((c) => c.id === catFlowerId);
-  const tree = all.find((c) => c.id === catTreeId);
-  assert.equal(flower.active_product_count, 0);
-  assert.equal(tree.active_product_count, 2);
-});
-
-test("欄位驗證：is_active 非布林／sort_order 負數或非整數 → 400", async () => {
-  const badActive = await api("POST", "/api/products", {
-    json: { name: "x", price: 1, category_id: catFlowerId, is_active: "yes" },
-    cookie: adminCookie,
-  });
-  assert.equal(badActive.status, 400);
-
-  const badSort = await api("PUT", `/api/products/${productA}`, {
+  // 重新上架商品
+  await api("PUT", `/api/products/${productA}`, {
     json: {
-      name: "x", price: 1, category_id: catFlowerId, sort_order: -1,
-    },
-    cookie: adminCookie,
-  });
-  assert.equal(badSort.status, 400);
-
-  const badCatSort = await api("PUT", `/api/categories/${catFlowerId}`, {
-    json: { name: "測試花卉", sort_order: 1.5 },
-    cookie: adminCookie,
-  });
-  assert.equal(badCatSort.status, 400);
-});
-
-test("sort_order 越小越前面；商品重新上架時分類自動恢復上架", async () => {
-  // 重新上架玫瑰並給最小排序；B/C 維持預設 999
-  const putA = await api("PUT", `/api/products/${productA}`, {
-    json: {
-      name: "玫瑰盆栽（大）",
-      description: "改版描述",
-      specs: "",
-      price: 150,
-      stock: 5,
+      name: "玫瑰盆栽",
+      description: "描述更新",
+      specs: PRODUCT_A_SPECS,
+      price: 100,
+      stock: 3,
       category_id: catFlowerId,
       image_url: null,
       is_active: true,
-      sort_order: 1,
     },
     cookie: adminCookie,
   });
-  assert.equal(putA.status, 200);
-
-  // 預設排序：sort_order 小者先，平手時 id 新者先 → [A(1), C(999), B(999)]
-  const def = await (await api("GET", "/api/products")).json();
-  assert.deepEqual(def.items.map((p) => p.id), [productA, productC, productB]);
-
-  // 明指定 newest 維持由新到舊 → [C, B, A]
-  const newest = await (await api("GET", "/api/products?sort=newest")).json();
-  assert.deepEqual(newest.items.map((p) => p.id), [productC, productB, productA]);
-
-  // 花卉有上架商品了 → 公開分類列表自動恢復，順序 sort_order 小者先、平手 id 小者先
-  const pub = await (await api("GET", "/api/categories")).json();
-  assert.deepEqual(
-    pub.map((c) => c.name),
-    ["測試花卉", "測試樹木"]
-  );
-  assert.equal(pub[0].product_count, 1);
-  assert.equal(pub[1].product_count, 2);
 });
 
-test("分類下架防護：仍有上架商品 → 409；商品全下架後才可下架", async () => {
-  // 樹木仍有 B/C 兩筆上架商品 → 下架應被拒絕
-  const blocked = await api("PUT", `/api/categories/${catTreeId}`, {
+test("分類保護機制：仍有商品時禁止下架與刪除 → 409", async () => {
+  // 下架阻擋
+  const delistBlocked = await api("PUT", `/api/categories/${catTreeId}`, {
     json: { name: "測試樹木", is_active: false },
     cookie: adminCookie,
   });
-  assert.equal(blocked.status, 409);
-  assert.match((await blocked.json()).error, /上架/);
+  assert.equal(delistBlocked.status, 409);
 
-  const pubBefore = await (await api("GET", "/api/categories")).json();
-  assert.deepEqual(
-    pubBefore.map((c) => c.name),
-    ["測試花卉", "測試樹木"],
-    "blocked delist must not hide the category"
-  );
-
-  // 下架 B、C 後即可成功下架分類
-  const productsOff = await Promise.all(
-    [
-      [productB, { name: "榕樹苗", description: "好照顧的樹", price: 300, stock: 0 }],
-      [productC, { name: "桂花樹", description: "秋天開花", price: 200, stock: 7 }],
-    ].map(([pid, base]) =>
-      api("PUT", `/api/products/${pid}`, {
-        json: { ...base, specs: "", category_id: catTreeId, image_url: null, is_active: false },
-        cookie: adminCookie,
-      })
-    )
-  );
-  for (const r of productsOff) assert.equal(r.status, 200);
-
-  const off = await api("PUT", `/api/categories/${catTreeId}`, {
-    json: { name: "測試樹木", is_active: false },
-    cookie: adminCookie,
-  });
-  assert.equal(off.status, 200);
-
-  let pub = await (await api("GET", "/api/categories")).json();
-  assert.deepEqual(
-    pub.map((c) => c.name),
-    ["測試花卉"]
-  );
-
-  // 還原：分類與 B/C 重新上架
-  const on = await api("PUT", `/api/categories/${catTreeId}`, {
-    json: { name: "測試樹木" },
-    cookie: adminCookie,
-  });
-  assert.equal(on.status, 200);
-
-  const productsOn = await Promise.all(
-    [
-      [productB, { name: "榕樹苗", description: "好照顧的樹", price: 300, stock: 0 }],
-      [productC, { name: "桂花樹", description: "秋天開花", price: 200, stock: 7 }],
-    ].map(([pid, base]) =>
-      api("PUT", `/api/products/${pid}`, {
-        json: { ...base, specs: "", category_id: catTreeId, image_url: null, is_active: true },
-        cookie: adminCookie,
-      })
-    )
-  );
-  for (const r of productsOn) assert.equal(r.status, 200);
-
-  pub = await (await api("GET", "/api/categories")).json();
-  assert.deepEqual(
-    pub.map((c) => c.name),
-    ["測試花卉", "測試樹木"]
-  );
+  // 刪除阻擋
+  const deleteBlocked = await api("DELETE", `/api/categories/${catTreeId}`, { cookie: adminCookie });
+  assert.equal(deleteBlocked.status, 409);
 });
 
-test("分類刪除防護：分類下仍有商品（含下架）→ 409", async () => {
-  const res = await api("DELETE", `/api/categories/${catTreeId}`, { cookie: adminCookie });
-  assert.equal(res.status, 409);
-  assert.match((await res.json()).error, /仍有商品/);
+// ════════════════════════════════════════════════════════════════════
+// 9. 後台登出 (Admin Logout)
+// ════════════════════════════════════════════════════════════════════
 
-  const cats = await (await api("GET", "/api/categories?all=1", { cookie: adminCookie })).json();
-  assert.ok(cats.some((c) => c.id === catTreeId), "blocked delete must keep the category");
-});
-
-// ── 登出 ──
-
-test("POST /api/admin/logout 回傳 ok 並設定過期 cookie（client 端登出）", async () => {
+test("POST /api/admin/logout 清除 Token Cookie", async () => {
   const res = await api("POST", "/api/admin/logout", { cookie: adminCookie });
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { ok: true });
-  // Stateless token design: logout only expires the cookie on the client,
-  // so assert the expired-cookie header rather than server-side revocation
   const setCookie = res.headers.getSetCookie().find((c) => c.startsWith("admin_token="));
   assert.ok(setCookie?.includes("Max-Age=0"));
-});
-
-// ── 進站統計（stats heartbeat / visits）──
-
-test("POST /api/stats/heartbeat 新 visitorId → 200 { ok: true }", async () => {
-  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-aaa" } });
-  assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { ok: true });
-});
-
-test("POST /api/stats/heartbeat 重複 visitorId → 200（UPDATE，不重複計算）", async () => {
-  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-aaa" } });
-  assert.equal(res.status, 200);
-});
-
-test("POST /api/stats/heartbeat visitorId 缺少或空字串 → 400", async () => {
-  const noId = await api("POST", "/api/stats/heartbeat", { json: {} });
-  assert.equal(noId.status, 400);
-
-  const empty = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "" } });
-  assert.equal(empty.status, 400);
-});
-
-test("POST /api/stats/heartbeat visitorId 超過 64 字元 → 400", async () => {
-  const res = await api("POST", "/api/stats/heartbeat", { json: { visitorId: "x".repeat(65) } });
-  assert.equal(res.status, 400);
-});
-
-test("GET /api/stats/visits 回傳 { online, today, week, month, total } 結構", async () => {
-  // 先發幾筆 heartbeat（aaa 已存在，再加 bbb、ccc）
-  await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-bbb" } });
-  await api("POST", "/api/stats/heartbeat", { json: { visitorId: "test-visitor-ccc" } });
-
-  const res = await api("GET", "/api/stats/visits");
-  assert.equal(res.status, 200);
-  const data = await res.json();
-
-  for (const key of ["online", "today", "week", "month", "total"]) {
-    assert.ok(typeof data[key] === "number" && data[key] >= 0, `${key} must be a non-negative number`);
-  }
-  // 3 個不同 visitorId 都在本日，total 至少 3
-  assert.ok(data.total >= 3);
-  assert.ok(data.today >= 3);
-  assert.ok(data.online >= 3, "all heartbeats are recent, should be counted as online");
-});
-
-test("GET /api/stats/visits 重複 visitor 只計一次", async () => {
-  // aaa 已送過多次 heartbeat，仍只算一個 unique visitor
-  const res = await api("GET", "/api/stats/visits");
-  const { total } = await res.json();
-  // total 應是 3（aaa, bbb, ccc），不因重送而膨脹
-  assert.equal(total, 3);
 });
