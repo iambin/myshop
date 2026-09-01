@@ -83,6 +83,10 @@ nano Caddyfile && docker compose restart
 docker run --rm -v myshop_server-data:/data -v $(pwd):/backup \
   alpine tar czf /backup/shop-backup-$(date +%F).tar.gz -C /data .
 
+# 人工清理被刪除的封存圖片（uploads-deleted/）
+docker compose exec server sh -c "rm -f /app/data/uploads-deleted/*"
+# 詳細進階與手動步驟見 docs/cleanup-deleted-images.md
+
 # 看日誌
 docker compose logs -f server   # 本專案後端
 cd proxy && docker compose logs caddy   # 反向代理／憑證

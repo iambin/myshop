@@ -105,6 +105,10 @@ https://webflow.com/templates/html/plantflow-florist-website-template 參考此�
 前後台的商品搜索,修正 商品類別+商品名稱 合併字串搜索,分析是否可行,還是有更優化的方法,請分析提供我最優化的方法
 上述更新結果,存檔在何處?
 
+把專案push到https://github.com/iambin/myshop main分支上,用中文寫提交摘要
+關於本專案,寫中文readme.md
+把https://github.com/iambin/myshop master分支,
+
 
 佈署環境與佈署詳細教學
 1.作業系統:Ubuntu-web
@@ -116,20 +120,25 @@ https://webflow.com/templates/html/plantflow-florist-website-template 參考此�
 7.教小白方式,一步一步教學,如何打包程式,如何佈署哪些程式碼,環境搭建,測試是否成功,寫成佈署詳細教學文檔
 8.儲存佈署詳細教學文檔
 
-佈署環境與佈署詳細教學
+佈署版本更新詳細教學
 1.作業系統:Ubuntu-web
 2.ip: 129.146.21.37
 3.Docker version 29.7.2 Docker Compose version v5.5.0
 4.Domain Name: iam369.dpdns.org
 5.cloudflare 託管 DNS name server 
 6.依照 @docs/deploy-vps-docker.md 
-7.教小白方式,一步一步教學,如何打包程式,如何佈署哪些程式碼,環境搭建,測試是否成功,寫成佈署詳細教學文檔
-8.儲存佈署詳細教學文檔
+7.之前的教學文檔 @docs/deploy-ubuntu-tutorial.md
+7.教小白方式,一步一步教學,如何更新舊版至新版前後端,寫成詳細教學文檔
+8.儲存教學文檔
 
 
 我的vps docker 有安裝 portainer.io 與 Caddy 反向代理容器的port 相衝突? 
 
 上述佈署方法需要nginx做代理嗎? 若需要,將nginx代理寫進教學文檔
+
+佈署在docker的後端 server/data/uploads-deleted 中圖檔如何人工刪除?
+進入docker 用人工下指令刪除
+上述教學結果存檔
 
 
 
