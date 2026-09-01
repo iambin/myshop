@@ -423,20 +423,61 @@ img {
   padding: 1.25rem;
   background: var(--surface);
   border-radius: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid #dcd5cc;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .specs h2 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--primary-dark);
-  margin-bottom: 0.75rem;
+  color: #1b4965;
+  margin-bottom: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.specs p {
+.specs h2::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 1em;
+  background: #1b4965;
+  border-radius: 2px;
+}
+
+.specs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.spec-row {
+  display: flex;
+  align-items: baseline;
+  padding: 0.5rem 0.625rem;
+  background: #fbf9f6;
+  border-radius: 6px;
+  border: 1px solid #eee7df;
   font-size: 0.925rem;
-  color: var(--text);
-  line-height: 1.7;
+  line-height: 1.5;
+}
+
+.spec-label {
+  font-weight: 600;
+  color: #55655a;
+  min-width: 5.5rem;
+  flex-shrink: 0;
+}
+
+.spec-value {
+  color: #1c261e;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.spec-row-full .spec-value {
+  color: #1c261e;
 }
 
 .btn {
@@ -1273,25 +1314,36 @@ img {
 }
 
 .product-detail-info .specs {
-  margin-top: 0.75rem;
-  padding: 0.875rem 1rem;
-  background: var(--bg);
+  margin-top: 0.875rem;
+  padding: 1rem;
+  background: #fbf9f6;
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid #dcd5cc;
 }
 
 .product-detail-info .specs h3 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--primary-dark);
-  margin-bottom: 0.5rem;
+  color: #1b4965;
+  margin-bottom: 0.625rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.product-detail-info .specs p {
+.product-detail-info .specs h3::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 1em;
+  background: #1b4965;
+  border-radius: 2px;
+}
+
+.product-detail-info .specs .spec-row {
+  background: #ffffff;
+  padding: 0.4rem 0.6rem;
   font-size: 0.875rem;
-  color: var(--text);
-  margin: 0.25rem 0;
-  line-height: 1.6;
 }
 
 @media (max-width: 640px) {

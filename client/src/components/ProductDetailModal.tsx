@@ -44,9 +44,26 @@ export function ProductDetailModal({ productId, onClose }: ProductDetailModalPro
               {product.specs && (
                 <div className="specs">
                   <h3>商品規格</h3>
-                  {product.specs.split("\n").map((line, i) => (
-                    <p key={i}>{line}</p>
-                  ))}
+                  <div className="specs-list">
+                    {product.specs.split("\n").filter((line) => line.trim()).map((line, i) => {
+                      const colonIdx = line.indexOf("：") !== -1 ? line.indexOf("：") : line.indexOf(":");
+                      if (colonIdx !== -1) {
+                        const key = line.slice(0, colonIdx).trim();
+                        const val = line.slice(colonIdx + 1).trim();
+                        return (
+                          <div key={i} className="spec-row">
+                            <span className="spec-label">{key}</span>
+                            <span className="spec-value">{val}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={i} className="spec-row spec-row-full">
+                          <span className="spec-value">{line}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
