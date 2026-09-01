@@ -268,7 +268,7 @@ img {
 .product-grid article img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
   background: var(--surface-alt);
 }
 
@@ -380,7 +380,7 @@ img {
 .detail-body img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 12px;
   background: var(--surface-alt);
 }
@@ -1240,7 +1240,7 @@ img {
 .product-detail-image-wrap img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 12px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
@@ -1418,9 +1418,10 @@ img {
   margin-top: 0.5rem;
   width: 140px;
   height: 140px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 10px;
   border: 1px solid var(--border);
+  background: var(--surface-alt);
 }
 
 .confirm-text {
