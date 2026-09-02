@@ -46,9 +46,6 @@ categories表 新增分類下架欄位與 sort_order 欄位,數字越小,排序�
 不包含在上架商品products表欄位category_id,表示上架商品沒有此分類,此分類會自動下架,實做上述功能
 
 
-執行有變更檔案的commit,用中文寫提交摘要
-確認變更並提交,用中文寫提交摘要
-
 操作邏輯錯誤,當我新增分類,因此分類沒有商品關聯,新增分類後就下架,當我新增商品時就無法選此分類,我的邏輯是當分類沒有與商品關聯時,在前端商品分類就不要出現
 
 當分類下架,關聯此分類的商品還是上架中,此分類就無法下架,當刪除分類時,關聯此分類還有商品,此分類無法刪除,修正錯誤
@@ -105,9 +102,19 @@ https://webflow.com/templates/html/plantflow-florist-website-template 參考此�
 前後台的商品搜索,修正 商品類別+商品名稱 合併字串搜索,分析是否可行,還是有更優化的方法,請分析提供我最優化的方法
 上述更新結果,存檔在何處?
 
+前台 class="specs" 文字內容的顏色與背景顏色反差太小,使用者不容易看清楚,使用粗體文字,是否違反網站設計界面原則?優化上述的缺點
+
+前台 class="product-detail-image-wrap" 在電腦端介面時商品圖檔太小,無法清楚顯示圖檔細節,分析是否有更好顯示圖檔大小合適介面
+
+前台 class="modal" ,關閉modal視窗的關閉按鈕僅是 X 圖案,不易看清楚,修正其圖示讓使用者更清楚識別
+
 把專案push到https://github.com/iambin/myshop main分支上,用中文寫提交摘要
+
 關於本專案,寫中文readme.md
-把https://github.com/iambin/myshop master分支,
+
+確認變更並提交,用中文寫提交摘要
+
+佈署在docker的後端 server/data/uploads-deleted 中圖檔如何人工刪除
 
 
 佈署環境與佈署詳細教學
@@ -135,10 +142,6 @@ https://webflow.com/templates/html/plantflow-florist-website-template 參考此�
 我的vps docker 有安裝 portainer.io 與 Caddy 反向代理容器的port 相衝突? 
 
 上述佈署方法需要nginx做代理嗎? 若需要,將nginx代理寫進教學文檔
-
-佈署在docker的後端 server/data/uploads-deleted 中圖檔如何人工刪除?
-進入docker 用人工下指令刪除
-上述教學結果存檔
 
 
 
