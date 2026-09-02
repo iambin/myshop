@@ -13,6 +13,7 @@ export function ProductDetailModal({ productId, onClose }: ProductDetailModalPro
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -31,7 +32,24 @@ export function ProductDetailModal({ productId, onClose }: ProductDetailModalPro
         {!loading && !error && product && (
           <div className="product-detail-content">
             <div className="product-detail-image-wrap">
-              <img src={product.image_url ?? ""} alt={product.name} />
+              <button
+                type="button"
+                className="product-detail-image-btn"
+                onClick={() => product.image_url && setIsZoomed(true)}
+                title="點擊放大檢視圖片"
+                aria-label="點擊放大檢視圖片"
+              >
+                <img src={product.image_url ?? ""} alt={product.name} />
+                <span className="image-zoom-badge">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                  放大檢視
+                </span>
+              </button>
             </div>
             <div className="product-detail-info">
               <span className="category">{product.category_name}</span>
@@ -70,6 +88,26 @@ export function ProductDetailModal({ productId, onClose }: ProductDetailModalPro
           </div>
         )}
       </div>
+      {isZoomed && product?.image_url && (
+        <div
+          className="image-lightbox-overlay"
+          onClick={() => setIsZoomed(false)}
+          role="dialog"
+          aria-label="圖片放大預覽"
+        >
+          <div className="image-lightbox-container" onClick={(e) => e.stopPropagation()}>
+            <img src={product.image_url} alt={product.name} className="image-lightbox-img" />
+            <button
+              type="button"
+              className="image-lightbox-close"
+              onClick={() => setIsZoomed(false)}
+              aria-label="關閉放大預覽"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
