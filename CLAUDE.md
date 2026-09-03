@@ -32,7 +32,7 @@ npx tsc -b       # 型別檢查
 npm run build    # 生產構建（含 tsc -b）
 ```
 
-無測試框架。驗證 API 用 curl 直接打 `http://localhost:3001/api/...`。
+以 Node.js 內建 `node --test` 撰寫 API 流程測試，位於 `server/tests/api-flow.test.mjs`。驗證 API 亦可用 curl 直接打 `http://localhost:3001/api/...`。
 
 ## npm install 注意事項
 

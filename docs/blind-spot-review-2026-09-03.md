@@ -154,10 +154,92 @@
 - [x] `AdminPage.tsx` 價格欄位 `step` 修正為 `1`
 - [x] 統一 `ProductInput` / `CategoryInput` 型別至 `types.ts`（移除 `client.ts` 重複定義）
 - [x] 分類 React key 改用 `id`（`HomePage.tsx`）
-- [x] 圖片「移除」按鈕觸發 `retireImage()` + 新增 `POST /api/uploads/retire` 端點
+- [x] 圖片「移除」按鈕觸發 `retireImage()` + 新增 `POST /api/uploads/retire` 端點（第三次審查：立刻封存會在取消編輯後弄丟前台圖，見第六節第 3 點）
 - [x] `checkAdminAuth` 改用 `GET /api/admin/me` 標準端點（替代畸形探測 POST）
 - [x] 登出不驗證當前登入狀態：登出前加 `if (!authed) return`
 
 ### 低優先級
-- [x] 加 CSP header（server 中間件 + nginx 轉送）
+- [ ] 加 CSP header（server 中間件 + nginx 轉送）— **第三次審查更正：HTML 頁面實際未套到，見第六節第 2 點**
 - [x] Modal 錯誤狀態加重試按鈕（ProductDetailModal）
+
+---
+
+## 六、第三次審查（2026-09-03）
+
+針對前兩次修復後的現況再掃一次：排除已修項目，專注還沒被記過、或上次勾成已修好但其實無效的死角。程式碼未改，僅記錄。
+
+### 🔴 高風險（新發現）
+
+**1. `AUTH_SECRET` 在生產是公開預設值，可偽造 admin cookie**
+
+- `server/src/auth.ts` 未設定時使用 `"dev-only-secret"`。
+- `docker-compose.yml` 只注入 `ADMIN_PASSWORD`，**沒有**把 `AUTH_SECRET` 傳進容器；就算在 `.env` 自行加了也不會生效。
+- Token 只是 `到期時間 + HMAC(secret)`，沒有伺服器端 session 表。任何人讀公開原始碼即可算出合法 `admin_token`，**不需要後台密碼**。登出只清瀏覽器 cookie，偷走的 token 在 7 天 TTL 內仍然有效。
+- `.env.example` 也沒有 `AUTH_SECRET`，操作者不會知道要設。
+- **✅ 已修復（2026-09-03）**：`auth.ts` 未設定 `AUTH_SECRET` 時直接 `throw`，禁止啟動；`docker-compose.yml` 注入 `AUTH_SECRET` 為必填；`.env.example` 補上 `AUTH_SECRET` 欄位。
+
+**2. nginx `add_header` 繼承問題 → 頁面其實沒有 CSP（上次「已修好」更正）**
+
+- nginx 規則：子 `location` 一旦自己寫了 `add_header`，**不會繼承** server 層的 header。
+- `location = /index.html` 只有 `Cache-Control`。SPA 的 `try_files` 內部導向 `/index.html`，使用者看到的 HTML **沒有 CSP**。
+- Express 的 CSP 只加在 `/api/` JSON 上，擋不了頁面 XSS。
+- **✅ 已修復（2026-09-03）**：CSP header 移至 `location = /index.html` 內；移除原 server 層 `add_header`（會被子 location 遮蔽）。
+
+**3. 「移除圖片」立刻封存，取消編輯後前台 404**
+
+- `AdminPage` 按「移除」會馬上 `POST /api/uploads/retire`，檔案立刻進 `uploads-deleted/`。若接著按取消／關 Modal，資料庫裡的 `image_url` 沒改，前台圖就斷了。
+- `POST /api/uploads/retire` **沒做引用計數**（刪商品時的 `tryRetireImage` 才有），共用同一張圖時會誤傷其他商品。
+- 上次清單把「移除按鈕觸發 retireImage」勾成已完成，這個副作用當時沒驗到。
+- **✅ 已修復（2026-09-03）**：「移除」按鈕只清表單 `image_url`，不調 retire；`handleSave` 儲存成功後才退役舊圖；`/retire` 加上引用計數檢查（409 回應）。
+
+### 🟡 中風險（新發現）
+
+**4. 進站「今日／本週／本月」用 UTC 切日**
+
+- `stats.ts` 用 `new Date().setHours(0,0,0,0)`，容器未設 `TZ`。Debian slim 預設 UTC。台灣會在早上 8 點才算新的一天。
+- 建議：compose 設 `TZ=Asia/Taipei`。
+- **⚠️ 待修復**：尚未修改 compose。
+
+**5. 上傳只查 MIME、不鎖副檔名**
+
+- multer 允許 `image/jpeg` 等，副檔名卻來自 `originalname`。可把 HTML 標成 `image/jpeg`、存成 `uuid.html`，再由 `express.static` 以 `text/html` 同網域送出。上傳需要管理員，但仍是同來源 XSS。
+- 建議：依 MIME 強制 `.jpg/.png/.webp/.gif`。
+- **✅ 已修復（2026-09-03）**：`filename` 改用 MIME → extension mapping；`fileFilter` 同時檢查 MIME 與副檔名；不一致時回 400。
+
+**6. Docker 備份直接 tar 正在跑的 WAL**
+
+- `docs/backup-strategy.md` 的 cron 對 volume 做 `tar`。SQLite 開了 WAL，活檔打包可能備份損壞。非 Docker 路徑有用 `.backup`，Docker 路徑沒有。
+- 建議：備份改用 `sqlite3 .backup` 再打包。
+- **✅ 已修復（2026-09-03）**：Docker 備份改先 `sqlite3 .backup` 出快照再打包；cron 一併更新。
+
+**7. 心跳公開、無上限**
+
+- `POST /api/stats/heartbeat` 無認證、無速率限制；`visit_stats` 永不清理。隨機 `visitorId` 可把表灌爆。
+- **✅ 已修復（2026-09-03）**：同一 `visitorId` 30 秒內重複發送不寫入（Throttle）。
+
+**8. 上傳後取消／連續換圖會留孤兒檔**
+
+- `handleImageUpload` 一選檔就寫入 `uploads/`。關 Modal、或不存檔又再傳一張，舊檔不會退役。與第 3 點相反：一個太早刪、一個根本沒刪。
+- **✅ 已修復（2026-09-03）**：`handleSave` 成功後才退役被替換的舊本地圖片；「移除」按鈕只清表單。
+
+**9. multer 沒有 error middleware**
+
+- 超過 5MB 或類型不對會落到 Express 預設 500，不是清楚的 400。後台只會看到 `Upload failed (500)`。
+- **✅ 已修復（2026-09-03）**：在路由註冊後新增錯誤 middleware，捕獲 multer 錯誤回 400。
+
+### 🟢 低風險
+
+- 搜尋框與 URL 不同步：`searchInput` 只在 mount 初始化，按瀏覽器返回時輸入框還是舊字。
+- **✅ 已修復（2026-09-03）**：`HomePage.tsx` 與 `AdminPage.tsx` 增加 `useEffect` 監聽 `searchParams` 同步輸入框。
+- 沒圖的商品 `<img src="">`：部分瀏覽器會再打一次目前頁面。
+- **⚠️ 待修復**：仍顯示 `<img src="">`。
+- `CLAUDE.md` 仍寫「無測試框架」，實際已有 `cd server && npm test`。
+- **✅ 已修復（2026-09-03）**：更新為「以 Node.js 內建 `node --test` 撰寫 API 流程測試」。
+- 分類後台登出沒有 `if (!authed) return`（商品後台有）。
+- **⚠️ 待修復**：尚未修改 CategoriesAdminPage。
+- 容器無 healthcheck，nginx 可能在 API 還沒起來時先 502。
+- **⚠️ 待修復**：尚未修改。
+- 獨立詳情頁沒有 Modal 那顆「重試」。
+- **⚠️ 待修復**：尚未修改。
+- 搜尋 `LIKE %term%`：輸入 `%`、`_` 會當萬用字元，不是 SQL 注入，但結果會怪。
+- **⚠️ 待修復**：尚未修改（低優先級）。

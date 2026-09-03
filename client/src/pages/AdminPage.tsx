@@ -67,6 +67,12 @@ function AdminPage() {
   // bumped to refetch after create/update/delete without touching the query string
   const [refreshTick, setRefreshTick] = useState(0);
 
+  // Keep search input in sync when URL changes (browser back/forward)
+  useEffect(() => {
+    const currentQ = searchParams.get("q") ?? "";
+    if (searchInput !== currentQ) setSearchInput(currentQ);
+  }, [searchParams]);
+
   function updateParams(changes: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams);
     for (const [key, value] of Object.entries(changes)) {
@@ -142,6 +148,8 @@ function AdminPage() {
     }
     setSaving(true);
     setFormError(null);
+    // Remember the old image URL so we can retire it after a successful save
+    const oldImageUrl = typeof editingId === "number" ? (products.find((p) => p.id === editingId)?.image_url ?? null) : null;
     try {
       const input = {
         ...form,
@@ -159,6 +167,10 @@ function AdminPage() {
         await updateProduct(editingId, input);
         setMessage("商品已更新");
         setTimeout(() => setMessage(null), 3000);
+        // Retire the old local image only after a successful save
+        if (oldImageUrl && oldImageUrl.startsWith("/api/uploads/") && input.image_url !== oldImageUrl) {
+          try { await retireImage(oldImageUrl); } catch { /* best-effort */ }
+        }
       }
       setEditingId(null);
       reload();
@@ -487,12 +499,10 @@ function AdminPage() {
                       <button
                         type="button"
                         className="btn small danger"
-                        onClick={async () => {
-                          const url = form.image_url;
+                        onClick={() => {
+                          // Only clear the form field; retire happens after successful save.
+                          // This avoids orphaning the image if the user cancels the edit.
                           setForm((f) => ({ ...f, image_url: "" }));
-                          if (url.startsWith("/api/uploads/")) {
-                            try { await retireImage(url); } catch { /* best-effort */ }
-                          }
                         }}
                       >
                         移除

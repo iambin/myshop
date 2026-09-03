@@ -44,11 +44,20 @@
 # 1. 建立備份目錄
 mkdir -p /root/backups
 
-# 2. 安全打包 Docker 資料卷與環境變數檔
+# 2. 先用 sqlite3 .backup 取得一致性快照（避免直接 tar 正在跑的 WAL 造成備份損壞）
+#    使用相同的 volume 載入 SQLite CLI，將 DB 備份到臨時檔案，再打包
 docker run --rm \
   -v myshop_server-data:/data:ro \
   -v /root/backups:/backup \
-  alpine tar -czvf /backup/myshop_data_$(date +%Y%m%d_%H%M%S).tar.gz -C /data .
+  alpine/sh -c '
+    apk add --no-cache sqlite-utils &&
+    sqlite3 /data/shop.db ".backup /backup/shop.db.bak" &&
+    tar -czf /backup/myshop_data_$(date +%Y%m%d_%H%M%S).tar.gz \
+      /backup/shop.db.bak \
+      /data/uploads/ \
+      /data/uploads-deleted/ \
+      /backup/shop.db.bak &&
+    rm -f /backup/shop.db.bak'
 
 # 3. 備份 .env 設定檔
 cp /root/myshop/.env /root/backups/env_$(date +%Y%m%d_%H%M%S).bak
@@ -88,5 +97,5 @@ rm server/data/shop_backup.db
 crontab -e
 
 # 加入以下排程（每天凌晨 03:00 執行備份並清理 30 天前的舊檔）
-0 3 * * * docker run --rm -v myshop_server-data:/data:ro -v /root/backups:/backup alpine tar -czvf /backup/myshop_data_$(date +\%Y\%m\%d).tar.gz -C /data . && find /root/backups -name "myshop_data_*.tar.gz" -mtime +30 -delete
+0 3 * * * mkdir -p /root/backups && docker run --rm -v myshop_server-data:/data:ro -v /root/backups:/backup alpine/sh -c 'apk add --no-cache sqlite-utils && sqlite3 /data/shop.db ".backup /backup/shop.db.bak" && tar -czf /backup/myshop_data_$(date +\%Y\%m\%d).tar.gz /backup/shop.db.bak /data/uploads/ /data/uploads-deleted/ && rm -f /backup/shop.db.bak' && find /root/backups -name "myshop_data_*.tar.gz" -mtime +30 -delete
 ```

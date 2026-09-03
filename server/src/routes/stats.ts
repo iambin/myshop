@@ -6,6 +6,10 @@ export const statsRouter = Router();
 // A visitor counts as "online" if we received a heartbeat within this window
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 const MAX_VISITOR_ID_LENGTH = 64;
+// Rate limit: max one heartbeat per visitor_id per 30 seconds
+const HEARTBEAT_COOLDOWN_MS = 30 * 1000;
+// Max distinct visitors in the table before pruning starts
+const MAX_STAT_ROWS = 5000;
 
 function parseVisitorId(body: unknown): string | null {
   const id = (body as Record<string, unknown> | null)?.visitorId;
@@ -22,6 +26,14 @@ statsRouter.post("/heartbeat", (req, res) => {
     return;
   }
   const now = Date.now();
+  // Throttle duplicate heartbeats from the same visitor
+  const last = db.prepare("SELECT last_seen_at FROM visit_stats WHERE visitor_id = ?").get(visitorId) as
+    | { last_seen_at: number }
+    | undefined;
+  if (last && now - last.last_seen_at < HEARTBEAT_COOLDOWN_MS) {
+    res.json({ ok: true });
+    return;
+  }
   db.prepare(
     `INSERT INTO visit_stats (visitor_id, first_seen_at, last_seen_at)
      VALUES (?, ?, ?)

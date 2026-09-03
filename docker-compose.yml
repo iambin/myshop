@@ -5,6 +5,7 @@ services:
     environment:
       # 未在 .env 設定就拒絕啟動，避免用預設密碼上線
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?請先複製 .env.example 為 .env 並設定 ADMIN_PASSWORD}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required — see .env.example}
     volumes:
       # SQLite 資料庫與上傳圖片持久化（shop.db、uploads/）
       - server-data:/app/data

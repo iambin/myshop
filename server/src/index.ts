@@ -51,6 +51,23 @@ app.use(
   })
 );
 
+// Catch multer errors (wrong MIME, wrong extension, size exceeded) so the client
+// gets a clear 400 instead of Express's default 500.
+// Must be after the route registrations — Express error-middleware matching
+// requires it to appear after the middleware that may throw.
+app.use((err: any, _req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
+  if (err.code === "LIMIT_UNEXPECTED_FILE") {
+    res.status(400).json({ error: "請上傳圖片檔案" });
+    return;
+  }
+  // fileFilter rejects have no multer code; detect by message content
+  if (err instanceof Error && (err.message?.includes("僅支援") || err.message?.includes("副檔名"))) {
+    res.status(400).json({ error: err.message });
+    return;
+  }
+  next(err);
+});
+
 app.get("/api/admin/me", (req, res) => {
   const token = getAuthToken(req);
   if (!verifyToken(token)) {

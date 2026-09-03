@@ -1,11 +1,15 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 
+if (!process.env.AUTH_SECRET) {
+  throw new Error(
+    "AUTH_SECRET is required for production. Set it via environment variable before starting the server."
+  );
+}
+
 const SESSION_TTL_MS = 7 * 24 * 3600 * 1000;
 
-// AUTH_SECRET rotates sessions on every restart unless set explicitly;
-// ADMIN_PASSWORD must be overridden via env in any real deployment.
-const SECRET = process.env.AUTH_SECRET ?? "dev-only-secret";
+const SECRET = process.env.AUTH_SECRET;
 const PASSWORD = process.env.ADMIN_PASSWORD ?? "1971";
 
 function sign(payload: string): string {

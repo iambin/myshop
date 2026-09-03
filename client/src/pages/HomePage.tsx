@@ -32,6 +32,12 @@ export function HomePage() {
   const categoryListRef = useRef<HTMLUListElement>(null);
   const manyCategories = categories.length > 8;
 
+  // Keep search input in sync when URL changes (browser back/forward)
+  useEffect(() => {
+    const currentQ = searchParams.get("q") ?? "";
+    if (searchInput !== currentQ) setSearchInput(currentQ);
+  }, [searchParams]);
+
   useEffect(() => {
     fetchCategories()
       .then(setCategories)

@@ -549,3 +549,60 @@ test("POST /api/admin/logout 清除 Token Cookie", async () => {
   const setCookie = res.headers.getSetCookie().find((c) => c.startsWith("admin_token="));
   assert.ok(setCookie?.includes("Max-Age=0"));
 });
+
+// ════════════════════════════════════════════════════════════════════
+// 10. 其他安全修正驗證 (Security & Edge Cases)
+// ════════════════════════════════════════════════════════════════════
+
+test("GET /api/admin/me 未登入 → 401；已登入 → 200", async () => {
+  const unauthed = await api("GET", "/api/admin/me");
+  assert.equal(unauthed.status, 401);
+
+  const authed = await api("GET", "/api/admin/me", { cookie: adminCookie });
+  assert.equal(authed.status, 200);
+  assert.deepEqual(await authed.json(), { ok: true });
+});
+
+test("POST /api/uploads/retire 停用引用中的圖片 → 409", async () => {
+  // 建立含本地圖片的商品
+  const png1x1 = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64"
+  );
+  const form = new FormData();
+  form.append("image", new Blob([png1x1], { type: "image/png" }), "retire-test.png");
+  const uploadRes = await fetch(`${BASE}/api/uploads`, {
+    method: "POST",
+    body: form,
+    headers: { Cookie: adminCookie },
+  });
+  assert.equal(uploadRes.status, 201);
+  const { url } = await uploadRes.json();
+
+  const created = await api("POST", "/api/products", {
+    json: { name: "停用測試商品", price: 10, stock: 1, category_id: catFlowerId, image_url: url },
+    cookie: adminCookie,
+  });
+  assert.equal(created.status, 201);
+
+  // 圖片仍被引用 → 409
+  const retireRes = await api("POST", "/api/uploads/retire", { json: { url }, cookie: adminCookie });
+  assert.equal(retireRes.status, 409);
+  assert.equal((await retireRes.json()).error, "圖片仍被商品引用，無法刪除");
+});
+
+test("POST /api/uploads 上傳副檔名與 MIME 不一致時回 400", async () => {
+  // 偽造 image/jpeg 但副檔名為 .html
+  const fakeJpeg = Buffer.from(
+    "FFD8FFE000104A46494600010100000100010000" + "00".repeat(100),
+    "hex"
+  );
+  const form = new FormData();
+  form.append("image", new Blob([fakeJpeg], { type: "image/jpeg" }), "malicious.html");
+  const res = await fetch(`${BASE}/api/uploads`, {
+    method: "POST",
+    body: form,
+    headers: { Cookie: adminCookie },
+  });
+  assert.equal(res.status, 400);
+});
