@@ -159,5 +159,5 @@
 - [x] 登出不驗證當前登入狀態：登出前加 `if (!authed) return`
 
 ### 低優先級
-- [ ] 加 CSP header
-- [ ] Modal 錯誤狀態加重試按鈕
+- [x] 加 CSP header（server 中間件 + nginx 轉送）
+- [x] Modal 錯誤狀態加重試按鈕（ProductDetailModal）
