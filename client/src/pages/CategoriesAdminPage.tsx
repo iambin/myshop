@@ -161,6 +161,7 @@ function CategoriesAdminPage() {
           <button
             className="btn"
             onClick={async () => {
+              if (!authed) return;
               await fetch("/api/admin/logout", { method: "POST" });
               setAuthed(false);
             }}

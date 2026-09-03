@@ -28,8 +28,7 @@ const upload = multer({
     filename: (_req, file, cb) => {
       const ext = mimeToExt(file.mimetype);
       if (!ext) {
-        cb(new Error("Internal error: unsupported MIME type"));
-        return;
+        throw new Error("Internal error: unsupported MIME type");
       }
       cb(null, `${crypto.randomUUID()}${ext}`);
     },

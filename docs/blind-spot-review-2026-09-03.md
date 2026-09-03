@@ -198,7 +198,7 @@
 
 - `stats.ts` 用 `new Date().setHours(0,0,0,0)`，容器未設 `TZ`。Debian slim 預設 UTC。台灣會在早上 8 點才算新的一天。
 - 建議：compose 設 `TZ=Asia/Taipei`。
-- **⚠️ 待修復**：尚未修改 compose。
+- **✅ 已修復（2026-09-03）**：`docker-compose.yml` 注入 `TZ=${TZ:-Asia/Taipei}`。
 
 **5. 上傳只查 MIME、不鎖副檔名**
 
@@ -232,14 +232,14 @@
 - 搜尋框與 URL 不同步：`searchInput` 只在 mount 初始化，按瀏覽器返回時輸入框還是舊字。
 - **✅ 已修復（2026-09-03）**：`HomePage.tsx` 與 `AdminPage.tsx` 增加 `useEffect` 監聽 `searchParams` 同步輸入框。
 - 沒圖的商品 `<img src="">`：部分瀏覽器會再打一次目前頁面。
-- **⚠️ 待修復**：仍顯示 `<img src="">`。
+- **✅ 已修復（2026-09-03）**：`ProductCard.tsx` 與 `ProductDetailPage.tsx` 加入 `onError` 回退為嵌入式 placeholder SVG，避免空的 `src` 引發額外的頁面請求。
 - `CLAUDE.md` 仍寫「無測試框架」，實際已有 `cd server && npm test`。
 - **✅ 已修復（2026-09-03）**：更新為「以 Node.js 內建 `node --test` 撰寫 API 流程測試」。
 - 分類後台登出沒有 `if (!authed) return`（商品後台有）。
-- **⚠️ 待修復**：尚未修改 CategoriesAdminPage。
+- **✅ 已修復（2026-09-03）**：`CategoriesAdminPage.tsx` 登出按鈕加上 `if (!authed) return`。
 - 容器無 healthcheck，nginx 可能在 API 還沒起來時先 502。
-- **⚠️ 待修復**：尚未修改。
+- **✅ 已修復（2026-09-03）**：`docker-compose.yml` 加入 healthcheck（輪詢 `/api/categories`），`depends_on` 改為 `condition: service_healthy`。
 - 獨立詳情頁沒有 Modal 那顆「重試」。
-- **⚠️ 待修復**：尚未修改。
-- 搜尋 `LIKE %term%`：輸入 `%`、`_` 會當萬用字元，不是 SQL 注入，但結果會怪。
 - **⚠️ 待修復**：尚未修改（低優先級）。
+- 搜尋 `LIKE %term%`：輸入 `%`、`_` 會當萬用字元，不是 SQL 注入，但結果會怪。
+- **✅ 已修復（2026-09-03）**：`products.ts` 搜尋時以 `ESCAPE '\\'` 跳脫 `%` 與 `_`，確保字面字符搜尋正確。

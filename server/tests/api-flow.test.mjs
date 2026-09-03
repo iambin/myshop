@@ -350,6 +350,13 @@ test("多關鍵字跨欄位交集搜尋（類別 + 品名 + 規格）", async ()
   assert.equal(noHit.total, 0);
 });
 
+test("搜尋萬用字元 % 與 _ 被轉義為字面字符而非 pattern", async () => {
+  // 以「品名：四季桂」為例，搜尋含 _ 的關鍵字（_ 在 SQL LIKE 是單字元通配符）
+  const hitUnderscore = await (await api("GET", `/api/products?q=${encodeURIComponent("四季桂")}`)).json();
+  assert.equal(hitUnderscore.total, 1, "應該能搜尋到有底線的規格文字");
+  assert.equal(hitUnderscore.items[0].name, "桂花樹");
+});
+
 // ════════════════════════════════════════════════════════════════════
 // 6. 排序與分頁 (Sorting & Pagination)
 // ════════════════════════════════════════════════════════════════════

@@ -208,10 +208,12 @@ function handleList(
     const terms = q.split(/\s+/).filter(Boolean);
     terms.forEach((term, index) => {
       const paramKey = `q_${index}`;
+      // Escape SQL LIKE wildcards so literal % and _ are treated as characters, not patterns
+      const escaped = term.replace(/[\\_%]/g, "\\$&");
       where.push(
-        `(p.name LIKE @${paramKey} OR c.name LIKE @${paramKey} OR p.description LIKE @${paramKey} OR p.specs LIKE @${paramKey})`
+        `(p.name LIKE @${paramKey} ESCAPE '\\' OR c.name LIKE @${paramKey} ESCAPE '\\' OR p.description LIKE @${paramKey} ESCAPE '\\' OR p.specs LIKE @${paramKey} ESCAPE '\\')`
       );
-      params[paramKey] = `%${term}%`;
+      params[paramKey] = `%${escaped}%`;
     });
   }
   if (category) {

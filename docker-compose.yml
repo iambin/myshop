@@ -6,12 +6,20 @@ services:
       # 未在 .env 設定就拒絕啟動，避免用預設密碼上線
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?請先複製 .env.example 為 .env 並設定 ADMIN_PASSWORD}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required — see .env.example}
+      TZ: ${TZ:-Asia/Taipei}
     volumes:
       # SQLite 資料庫與上傳圖片持久化（shop.db、uploads/）
       - server-data:/app/data
     # 僅供 compose 內部網路存取，不對外開 port
     expose:
       - "3001"
+    # 等待 API 真正可回應才視為就緒（depends_on condition: service_healthy 時 client 才會啟動）
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const c = http.get('http://localhost:3001/api/categories', {timeout:2000}, r => { if(r.statusCode===200){c.destroy(); process.exit(0);} else {c.destroy(); process.exit(1);} }); c.on('error', ()=>process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   client:
     build: ./client
@@ -26,7 +34,8 @@ services:
           # 反向代理以此名稱分流到本站；多站共存時每個專案的 alias 必須唯一
           - myshop-web
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
 volumes:
   server-data:
