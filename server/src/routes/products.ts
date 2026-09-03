@@ -3,6 +3,14 @@ import { db } from "../db.js";
 import { requireAdmin } from "../auth.js";
 import { retireUploadedImage } from "./uploads.js";
 
+function tryRetireImage(imageUrl: string | null | undefined) {
+  if (!imageUrl) return;
+  const inUse = db.prepare("SELECT 1 FROM products WHERE image_url = ? LIMIT 1").get(imageUrl);
+  if (!inUse) {
+    retireUploadedImage(imageUrl);
+  }
+}
+
 export const productsRouter = Router();
 
 // Read endpoints stay public; mutations require admin login
@@ -130,9 +138,9 @@ productsRouter.put("/:id", (req, res) => {
      image_url = @image_url, stock = @stock, category_id = @category_id,
      is_active = @is_active, sort_order = @sort_order WHERE id = @id`
   ).run({ ...parsed.data, id });
-  // image replaced → retire the previous local upload so it doesn't linger in UPLOADS_DIR
+  // image replaced → retire the previous local upload if no other product uses it
   if (existing.image_url && existing.image_url !== parsed.data.image_url) {
-    retireUploadedImage(existing.image_url);
+    tryRetireImage(existing.image_url);
   }
   res.json({ ok: true });
 });
@@ -146,7 +154,7 @@ productsRouter.delete("/:id", (req, res) => {
     return;
   }
   db.prepare("DELETE FROM products WHERE id = ?").run(Number(req.params.id));
-  retireUploadedImage(row.image_url);
+  tryRetireImage(row.image_url);
   res.json({ ok: true });
 });
 

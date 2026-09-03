@@ -116,6 +116,8 @@ https://webflow.com/templates/html/plantflow-florist-website-template 參考此�
 
 佈署在docker的後端 server/data/uploads-deleted 中圖檔如何人工刪除
 
+對 @docs/blind-spot-review-2026-09-03.md 專案盲點審查，驗證是否需要再改進的地方或是不是盲點的地方
+
 
 佈署環境與佈署詳細教學
 1.作業系統:Ubuntu-web

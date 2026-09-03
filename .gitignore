@@ -8,3 +8,4 @@ dist/
 .env
 server/data/uploads/
 server/data/uploads-deleted/
+*.log

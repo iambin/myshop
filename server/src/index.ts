@@ -2,12 +2,12 @@ import express from "express";
 import { db } from "./db.js";
 import { productsRouter } from "./routes/products.js";
 import { categoriesRouter } from "./routes/categories.js";
-import { makeToken, verifyPassword } from "./auth.js";
+import { makeToken, requireAdmin, verifyPassword } from "./auth.js";
 import { uploadsRouter, UPLOADS_DIR } from "./routes/uploads.js";
 import { statsRouter } from "./routes/stats.js";
 
 if (!process.env.ADMIN_PASSWORD) {
-  console.warn("WARNING: ADMIN_PASSWORD not set; using default 'admin123'. Set it via env before deploying.");
+  console.warn("WARNING: ADMIN_PASSWORD not set; using default '1971'. Set it via env before deploying.");
 }
 
 const app = express();
@@ -39,7 +39,7 @@ app.post("/api/admin/login", (req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/admin/logout", (_req, res) => {
+app.post("/api/admin/logout", requireAdmin, (_req, res) => {
   res.setHeader("Set-Cookie", "admin_token=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0");
   res.json({ ok: true });
 });

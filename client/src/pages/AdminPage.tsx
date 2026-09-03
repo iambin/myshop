@@ -418,7 +418,7 @@ function AdminPage() {
                   <input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={form.price}
                     onFocus={() => {
                       if (form.price === "0") setForm({ ...form, price: "" });

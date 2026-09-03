@@ -430,6 +430,50 @@ test("POST /api/uploads 上傳圖片 → 201，刪除商品時圖片自動移至
   assert.ok(fs.existsSync(path.join(deletedDir, filename)), "image must be moved to uploads-deleted/");
 });
 
+test("圖片防誤刪保護：多商品共用同一圖片時，未全數刪除前圖檔不退役", async () => {
+  const png1x1 = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64"
+  );
+  const form = new FormData();
+  form.append("image", new Blob([png1x1], { type: "image/png" }), "shared-test.png");
+  const uploadRes = await fetch(`${BASE}/api/uploads`, {
+    method: "POST",
+    body: form,
+    headers: { Cookie: adminCookie },
+  });
+  assert.equal(uploadRes.status, 201);
+  const { url } = await uploadRes.json();
+  const filename = path.basename(url);
+  const uploadsDir = path.join(dataDir, "uploads");
+  const deletedDir = path.join(dataDir, "uploads-deleted");
+
+  // 建立兩個商品指向同一個圖片 URL
+  const p1Res = await api("POST", "/api/products", {
+    json: { name: "共用圖商品A", price: 10, stock: 1, category_id: catFlowerId, image_url: url },
+    cookie: adminCookie,
+  });
+  const { id: id1 } = await p1Res.json();
+
+  const p2Res = await api("POST", "/api/products", {
+    json: { name: "共用圖商品B", price: 20, stock: 1, category_id: catFlowerId, image_url: url },
+    cookie: adminCookie,
+  });
+  const { id: id2 } = await p2Res.json();
+
+  // 刪除第一個商品：因商品 B 仍在使用該圖，圖檔不可被退役
+  const del1 = await api("DELETE", `/api/products/${id1}`, { cookie: adminCookie });
+  assert.equal(del1.status, 200);
+  assert.ok(fs.existsSync(path.join(uploadsDir, filename)), "image must remain in uploads/ because product B still references it");
+  assert.ok(!fs.existsSync(path.join(deletedDir, filename)), "image must NOT be moved to uploads-deleted/");
+
+  // 刪除第二個商品：無其他商品引用，圖檔正式退役
+  const del2 = await api("DELETE", `/api/products/${id2}`, { cookie: adminCookie });
+  assert.equal(del2.status, 200);
+  assert.ok(!fs.existsSync(path.join(uploadsDir, filename)), "image must now be removed from uploads/");
+  assert.ok(fs.existsSync(path.join(deletedDir, filename)), "image must be moved to uploads-deleted/");
+});
+
 // ════════════════════════════════════════════════════════════════════
 // 8. 商品下架與分類聯動防護 (Delist & Protection)
 // ════════════════════════════════════════════════════════════════════
@@ -493,6 +537,11 @@ test("分類保護機制：仍有商品時禁止下架與刪除 → 409", async 
 // ════════════════════════════════════════════════════════════════════
 // 9. 後台登出 (Admin Logout)
 // ════════════════════════════════════════════════════════════════════
+
+test("未登入呼叫 POST /api/admin/logout → 401", async () => {
+  const res = await api("POST", "/api/admin/logout");
+  assert.equal(res.status, 401);
+});
 
 test("POST /api/admin/logout 清除 Token Cookie", async () => {
   const res = await api("POST", "/api/admin/logout", { cookie: adminCookie });
