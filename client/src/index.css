@@ -658,6 +658,12 @@ img {
   color: var(--success);
 }
 
+.product-detail-error {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .product-form {
   display: flex;
   flex-direction: column;

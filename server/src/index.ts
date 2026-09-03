@@ -12,6 +12,31 @@ if (!process.env.ADMIN_PASSWORD) {
 
 const app = express();
 app.use(express.json());
+
+// Content Security Policy — lock down what the browser may load or execute.
+// script-style / style-style allow inline styles injected by React;
+// img-src permits external images the admin can paste into product fields.
+const isProd = process.env.NODE_ENV === "production";
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      `default-src 'self'`,
+      `script-src 'self'`,
+      `style-src 'self' 'unsafe-inline'`,
+      `img-src 'self' https: data: blob:`,
+      `connect-src 'self'`,
+      `font-src 'self'`,
+      `object-src 'none'`,
+      `base-uri 'self'`,
+      `form-action 'self'`,
+      isProd ? "upgrade-insecure-requests" : "",
+    ]
+      .filter(Boolean)
+      .join("; ")
+  );
+  next();
+});
 app.use("/api/products", productsRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/uploads", uploadsRouter);

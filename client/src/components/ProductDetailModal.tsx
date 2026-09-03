@@ -24,11 +24,27 @@ export function ProductDetailModal({ productId, onClose }: ProductDetailModalPro
       .finally(() => setLoading(false));
   }, [productId]);
 
+  function retry() {
+    setLoading(true);
+    setError(null);
+    fetchProduct(productId)
+      .then(setProduct)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }
+
   return (
     <Modal title={product?.name || "商品詳情"} onClose={onClose}>
       <div className="product-detail-modal">
         {loading && <p className="status">載入中…</p>}
-        {error && <p className="status error">發生錯誤：{error}</p>}
+        {error && (
+          <div className="product-detail-error">
+            <p className="status error">發生錯誤：{error}</p>
+            <button className="btn secondary" onClick={retry}>
+              重試
+            </button>
+          </div>
+        )}
         {!loading && !error && product && (
           <div className="product-detail-content">
             <div className="product-detail-image-wrap">
