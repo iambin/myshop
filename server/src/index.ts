@@ -2,7 +2,7 @@ import express from "express";
 import { db } from "./db.js";
 import { productsRouter } from "./routes/products.js";
 import { categoriesRouter } from "./routes/categories.js";
-import { makeToken, requireAdmin, verifyPassword } from "./auth.js";
+import { makeToken, requireAdmin, verifyPassword, verifyToken, getAuthToken } from "./auth.js";
 import { uploadsRouter, UPLOADS_DIR } from "./routes/uploads.js";
 import { statsRouter } from "./routes/stats.js";
 
@@ -25,6 +25,15 @@ app.use(
     index: false,
   })
 );
+
+app.get("/api/admin/me", (req, res) => {
+  const token = getAuthToken(req);
+  if (!verifyToken(token)) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  res.json({ ok: true });
+});
 
 app.post("/api/admin/login", (req, res) => {
   if (!verifyPassword((req.body as { password?: unknown })?.password)) {

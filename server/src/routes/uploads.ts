@@ -61,3 +61,12 @@ export function retireUploadedImage(url: string | null | undefined): boolean {
     return false;
   }
 }
+
+uploadsRouter.post("/retire", requireAdmin, (req, res) => {
+  const { url } = req.body as { url?: string };
+  if (!url || !retireUploadedImage(url)) {
+    res.status(400).json({ error: "請提供有效的圖片 URL" });
+    return;
+  }
+  res.json({ ok: true });
+});

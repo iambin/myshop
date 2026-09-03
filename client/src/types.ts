@@ -43,6 +43,12 @@ export interface ProductInput {
   sort_order: number;
 }
 
+export interface CategoryInput {
+  name: string;
+  is_active: number;
+  sort_order: number;
+}
+
 export interface VisitStats {
   online: number;
   today: number;

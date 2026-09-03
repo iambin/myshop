@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchProducts } from "../api/client";
-import type { Product } from "../types";
+import { fetchProducts, fetchCategories } from "../api/client";
+import type { Product, Category } from "../types";
 import { ProductCard } from "../components/ProductCard";
 import { Pagination } from "../components/Pagination";
 import { Logo } from "../components/Logo";
@@ -19,7 +19,7 @@ export function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +33,8 @@ export function HomePage() {
   const manyCategories = categories.length > 8;
 
   useEffect(() => {
-    fetch("/api/categories")
-      .then((res) => res.json())
-      .then((data) => setCategories(data.map((c: { name: string }) => c.name)))
+    fetchCategories()
+      .then(setCategories)
       .catch(() => setCategories([]));
   }, []);
 
@@ -104,13 +103,13 @@ export function HomePage() {
               <button className={!category ? "active" : ""} onClick={() => updateParams({ category: null, page: null })}>
                 全部
               </button>            </li>
-            {categories.map((name) => (
-              <li key={name}>
+            {categories.map((c) => (
+              <li key={c.id}>
                 <button
-                  className={category === name ? "active" : ""}
-                  onClick={() => updateParams({ category: name, page: null })}
+                  className={category === c.name ? "active" : ""}
+                  onClick={() => updateParams({ category: c.name, page: null })}
                 >
-                  {name}
+                  {c.name}
                 </button>
               </li>
             ))}

@@ -87,7 +87,49 @@
 
 ---
 
-## 四、提問方式建議（寫給 AI 協作）
+## 四、本次新增盲點（2026-09-03 第二次審查）
+
+上次審查後修復已驗證：`/products/:id` 路由已啟用、`nginx.conf` 已快取規則修正、圖片退役前已加入引用計數檢查。以下為本次新發現的隱藏盲區：
+
+### 🔴 高風險
+
+**1. 登入無速率限制（`server/src/auth.ts` + `server/src/index.ts`）**
+`/api/admin/login` 無任何防濫刷機制。攻擊者可無限次嘗試密碼，預設 `1971` 容易被猜中。建議加 IP 階梯延遲或鎖定。
+
+**2. CSRF / Secure flag 缺失**
+登出入 Cookie 只有 `HttpOnly; SameSite=Lax; Path=/`，缺 `Secure` flag（生產環境應強制 HTTPS）。`SameSite=Lax` 對 POST 有基本防護，但部署到外部時若為 HTTP 仍會暴露 session。
+
+**3. 圖片 URL 未驗證（`client/src/pages/AdminPage.tsx`）**
+管理後台可直接輸入任意 `image_url`（包含外部網址或惡意 scheme）。雖然 React JSX 的 `<img src>` 不執行 `javascript:` URI，但可連結到惡意圖床竊取流量或污染資料。建議在 `parseProductBody` 中驗證 URL scheme 僅允許 `http://` / `https://` / `/api/uploads/...`。
+
+### 🟡 中風險
+
+**4. 型別重複定義（`client/src/types.ts` vs `client/src/api/client.ts`）**
+`ProductInput` 和 `CategoryInput` 在各自檔案中各定義一次。任何一側修改都會不同步。應統一在 `types.ts` 匯出，`client.ts` import 使用。
+
+**5. Modal 錯誤狀態無重試（`client/src/components/ProductDetailModal.tsx`）**
+根據 CLAUDE.md 規定只能透過 × 關閉，符合設計。但若 `fetchProduct` 拋出錯誤且網絡異常，用戶只能 × 關閉，無法重試。可考慮加「錯誤重試」按鈕。
+
+**6. 心跳發送時機（`client/src/components/VisitorStats.tsx`）**
+`sendHeartbeat()` 僅在 `VisitorStats`（掛在 `Footer`）中呼叫，Footer 在 SPA 導航下只 mount 一次。目前線上人數（5 分鐘視窗）追蹤正確，但若未來需要「頁面瀏覽」或「活躍頁面」統計則不足。
+
+**7. 分類以 name 作為 React key（`client/src/pages/HomePage.tsx` L108）**
+`key={name}` 在名稱重複時會導致列表渲染錯誤。後端有 `UNIQUE` 約束，實務上不會發生，但防禦性程式碼應改用 `id`。
+
+### 🟢 低風險 / 建議改善
+
+**8. 無 CSP Header**
+目前沒有設定 `Content-Security-Policy`。若未來任意字串被渲染到 HTML 中（如規格說明），會有 XSS 風險。建議加上基本的 CSP。
+
+**9. 登出不驗證當前登入狀態（`client/src/pages/AdminPage.tsx` L250-253）**
+登出按鈕在任何狀態下都可點擊，直接發 POST 請求。若已經未登入，仍會發一次無效請求。影響不大。
+
+**10. 圖片移除按鈕不觸發 retire（`client/src/pages/AdminPage.tsx` L488）**
+「移除」按鈕只清空表單中的 `image_url`，不會呼叫 `retireUploadedImage()`。若用戶先前上傳了圖片再點擊移除，該圖片會停留在 `uploads/` 目錄中成為孤兒檔案。
+
+---
+
+## 五、提問方式建議（寫給 AI 協作）
 
 1. **把「端到端路徑」寫進提問**：例「新增商品詳情頁，路徑 `/products/5` 直接打開要能看到內容」，要求主動檢查路由、nginx fallback、測試整條鏈，而非只寫元件。
 2. **報 bug 用「預期行為 + 實際行為」句式**：例「後台輸入價格 123.45，儲存後前台顯示 123；預期是……」。
@@ -98,12 +140,24 @@
 
 ## 修正後的下一步建議任務清單（依優先級）
 
-1. **高優先級（線上穩定性與防護）**：
-   - 修改 `client/nginx.conf`：為 `/index.html` 增加 `no-cache`，為 `/assets/` 設置 `try_files $uri =404` 與長快取，防止發版白畫面。
-   - 處理 `ProductDetailPage.tsx`：移除孤兒頁面或於 `App.tsx` 掛上路由，並同步校正 `CLAUDE.md` 與 `nginx.conf` 註解。
-   - `.gitignore` 增加 `*.log`，並執行 `git rm --cached` 將已追蹤的 log 檔案自版本控制中移除。
-2. **中優先級（業務邏輯與安全性修正）**：
-   - 統一 `server/src/index.ts` 預設密碼警告文案為 `1971`。
-   - `AdminPage.tsx` 價格欄位 `step` 修正為 `1`。
-   - `server/src/routes/products.ts` 在退役圖片前加入引用計數檢查，防止共用圖片被誤刪。
-   - `server/src/index.ts` 的 `POST /api/admin/logout` 掛上 `requireAdmin`。
+### 高優先級（線上穩定性與防護）
+- [x] 修改 `client/nginx.conf`：為 `/index.html` 增加 `no-cache`，為 `/assets/` 設置 `try_files $uri =404` 與長快取
+- [x] 處理 `ProductDetailPage.tsx`：於 `App.tsx` 掛上路由
+- [x] `.gitignore` 增加 `*.log`，並執行 `git rm --cached` 移除已追蹤的 log
+- [x] `server/src/routes/products.ts` 在退役圖片前加入引用計數檢查
+- [ ] 登入加速率限制或階梯延遲
+- [x] `parseProductBody` 中驗證圖片 URL scheme（新增 `validateImageUrl()`）
+- [ ] 登出入 Cookie 補上 `Secure` flag（生產環境）
+
+### 中優先級（業務邏輯與安全性修正）
+- [x] 統一 `server/src/index.ts` 預設密碼警告文案為 `1971`
+- [x] `AdminPage.tsx` 價格欄位 `step` 修正為 `1`
+- [x] 統一 `ProductInput` / `CategoryInput` 型別至 `types.ts`（移除 `client.ts` 重複定義）
+- [x] 分類 React key 改用 `id`（`HomePage.tsx`）
+- [x] 圖片「移除」按鈕觸發 `retireImage()` + 新增 `POST /api/uploads/retire` 端點
+- [x] `checkAdminAuth` 改用 `GET /api/admin/me` 標準端點（替代畸形探測 POST）
+- [x] 登出不驗證當前登入狀態：登出前加 `if (!authed) return`
+
+### 低優先級
+- [ ] 加 CSP header
+- [ ] Modal 錯誤狀態加重試按鈕

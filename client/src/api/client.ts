@@ -1,4 +1,4 @@
-import type { Category, Product, ProductListResponse, VisitStats } from "../types";
+import type { Category, Product, ProductListResponse, VisitStats, ProductInput, CategoryInput } from "../types";
 
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -40,18 +40,6 @@ export function fetchCategories(): Promise<Category[]> {
   return get<Category[]>("/api/categories");
 }
 
-export interface ProductInput {
-  name: string;
-  description: string;
-  specs: string;
-  price: number;
-  image_url: string | null;
-  stock: number;
-  category_id: number;
-  is_active: number;
-  sort_order: number;
-}
-
 async function send<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -89,10 +77,21 @@ export async function uploadImage(file: File): Promise<{ url: string }> {
   return res.json();
 }
 
+export async function retireImage(url: string): Promise<void> {
+  const res = await fetch("/api/uploads/retire", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error ?? `Retire failed (${res.status})`);
+  }
+}
+
 export async function checkAdminAuth(): Promise<boolean> {
-  const res = await fetch("/api/products?page=1&pageSize=1", { method: "POST" });
-  // 401 = not logged in; 400 (validation error) = logged in
-  return res.status !== 401;
+  const res = await fetch("/api/admin/me");
+  return res.status === 200;
 }
 
 export interface CategoryWithCount extends Category {
@@ -105,12 +104,6 @@ export interface CategoryWithCount extends Category {
 /** 管理列表：含手動下架與自動下架（無上架商品）的分類，需登入 */
 export function fetchCategoriesWithCount(): Promise<CategoryWithCount[]> {
   return get<CategoryWithCount[]>("/api/categories?all=1");
-}
-
-export interface CategoryInput {
-  name: string;
-  is_active: number;
-  sort_order: number;
 }
 
 export function createCategory(input: CategoryInput): Promise<{ id: number }> {

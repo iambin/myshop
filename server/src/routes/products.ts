@@ -83,13 +83,21 @@ function parseProductBody(body: unknown): { ok: true; data: NewProductData } | {
       description: typeof b.description === "string" ? b.description : "",
       specs: typeof b.specs === "string" ? b.specs : "",
       price: roundedPrice,
-      image_url: typeof b.image_url === "string" && b.image_url.trim() ? b.image_url.trim() : null,
+      image_url: validateImageUrl(typeof b.image_url === "string" && b.image_url.trim() ? b.image_url.trim() : null),
       stock,
       category_id,
       is_active: active.data,
       sort_order: sortOrder.data,
     },
   };
+}
+
+// Only allow local uploads (/api/uploads/*) or HTTPS external images.
+function validateImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  if (/^\/api\/uploads\//.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  return null;
 }
 
 interface NewProductData {

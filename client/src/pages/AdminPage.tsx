@@ -6,6 +6,7 @@ import {
   deleteProduct,
   fetchCategoriesWithCount,
   fetchProducts,
+  retireImage,
   updateProduct,
   uploadImage,
   type CategoryWithCount,
@@ -248,6 +249,7 @@ function AdminPage() {
           <button
             className="btn"
             onClick={async () => {
+              if (!authed) return;
               await fetch("/api/admin/logout", { method: "POST" });
               setAuthed(false);
             }}
@@ -485,7 +487,13 @@ function AdminPage() {
                       <button
                         type="button"
                         className="btn small danger"
-                        onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
+                        onClick={async () => {
+                          const url = form.image_url;
+                          setForm((f) => ({ ...f, image_url: "" }));
+                          if (url.startsWith("/api/uploads/")) {
+                            try { await retireImage(url); } catch { /* best-effort */ }
+                          }
+                        }}
                       >
                         移除
                       </button>
