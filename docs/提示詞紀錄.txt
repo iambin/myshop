@@ -153,3 +153,5 @@ https://webflow.com/templates/html/plantflow-florist-website-template 參考此�
 教新手小白方式,如何備份網站與還原備份,寫成詳細教學文檔(.html),能讓閱讀障礙者可以讀懂文檔
 
 網站依照 @deploy-ubuntu-tutorial.md 佈署,教新手小白方式,如何備份網站與還原備份,寫成詳細教學文檔
+
+確認變更並提交,用中文寫提交摘要
