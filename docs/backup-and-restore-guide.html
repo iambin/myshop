@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新手小白也能懂：網站備份與還原超詳細圖解教學</title>
+  <style>
+    /* =========================================================
+       無障礙與閱讀障礙友善基礎設定 (Dyslexia-Friendly Styling)
+       ========================================================= */
+    :root {
+      --bg-color: #FAF8F5;          /* 暖米白底，降低純白反光眩光 */
+      --text-color: #2D3139;        /* 柔和深鐵灰，非純黑，減少視覺對比壓迫 */
+      --card-bg: #FFFFFF;
+      --card-border: #E2DDD5;
+      --accent: #2563EB;            /* 明確清晰的藍色 */
+      --accent-hover: #1D4ED8;
+      --success: #15803D;           /* 清晰綠色 */
+      --warning: #B45309;           /* 警告橙色 */
+      --danger: #B91C1C;            /* 危險紅色 */
+      --ruler-color: rgba(254, 240, 138, 0.4); /* 閱讀輔助尺黃色高亮 */
+      --font-stack: "OpenDyslexic", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", sans-serif;
+      --font-size: 19px;
+      --line-height: 1.85;
+      --letter-spacing: 0.05em;
+      --word-spacing: 0.1em;
+    }
+
+    /* 主題切換變數 */
+    body.theme-cream {
+      --bg-color: #FBF0D9;
+      --text-color: #382E20;
+      --card-bg: #FFF9EE;
+      --card-border: #E8D8BF;
+    }
+    body.theme-softblue {
+      --bg-color: #EDF4F9;
+      --text-color: #1E2E3D;
+      --card-bg: #F7FAFC;
+      --card-border: #D1DFEC;
+    }
+    body.theme-dark {
+      --bg-color: #1E222A;
+      --text-color: #E2E8F0;
+      --card-bg: #282E39;
+      --card-border: #3F4756;
+      --ruler-color: rgba(96, 165, 250, 0.25);
+    }
+
+    /* 針對字體切換 */
+    body.font-large {
+      --font-size: 22px;
+      --line-height: 2.0;
+    }
+    body.font-huge {
+      --font-size: 25px;
+      --line-height: 2.1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-stack);
+      font-size: var(--font-size);
+      line-height: var(--line-height);
+      letter-spacing: var(--letter-spacing);
+      word-spacing: var(--word-spacing);
+      padding: 24px 16px 120px 16px;
+      transition: background-color 0.25s, color 0.25s, font-size 0.2s;
+    }
+
+    /* 限制閱讀欄寬在最舒適的 720px，避免眼球橫掃疲勞 */
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+    }
+
+    /* 閱讀輔助尺規 (Reading Guide / Ruler) */
+    #reading-ruler {
+      position: fixed;
+      left: 0;
+      width: 100vw;
+      height: 48px;
+      background: var(--ruler-color);
+      border-top: 2px dashed rgba(202, 138, 4, 0.6);
+      border-bottom: 2px dashed rgba(202, 138, 4, 0.6);
+      pointer-events: none;
+      display: none;
+      z-index: 9999;
+      transform: translateY(-50%);
+    }
+
+    /* 頂部固定無障礙工具列 */
+    .a11y-toolbar {
+      position: sticky;
+      top: 12px;
+      z-index: 100;
+      background: var(--card-bg);
+      border: 2px solid var(--accent);
+      border-radius: 16px;
+      padding: 12px 18px;
+      margin-bottom: 30px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .tool-btn {
+      background: var(--bg-color);
+      color: var(--text-color);
+      border: 2px solid var(--card-border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn:hover, .tool-btn:focus-visible {
+      border-color: var(--accent);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .tool-btn.active {
+      background: var(--accent);
+      color: #FFFFFF;
+      border-color: var(--accent);
+    }
+
+    /* 標題層級：間距大、清楚易讀 */
+    h1 {
+      font-size: 1.85em;
+      line-height: 1.35;
+      margin-bottom: 16px;
+      color: var(--text-color);
+      border-bottom: 4px solid var(--accent);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.45em;
+      line-height: 1.4;
+      margin-top: 36px;
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      background: rgba(37, 99, 235, 0.08);
+      border-left: 6px solid var(--accent);
+      border-radius: 4px;
+    }
+
+    h3 {
+      font-size: 1.2em;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    p {
+      margin-bottom: 16px;
+    }
+
+    /* 強調標記 */
+    strong {
+      font-weight: 800;
+      color: var(--text-color);
+      background-color: rgba(234, 179, 8, 0.2);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    /* 區塊卡片 */
+    .card {
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    }
+
+    .card.warning {
+      border-left: 8px solid var(--warning);
+      background-color: rgba(245, 158, 11, 0.06);
+    }
+
+    .card.success {
+      border-left: 8px solid var(--success);
+      background-color: rgba(34, 197, 94, 0.06);
+    }
+
+    .card.danger {
+      border-left: 8px solid var(--danger);
+      background-color: rgba(239, 68, 68, 0.06);
+    }
+
+    /* 白話圖解大卡片 */
+    .metaphor-box {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    @media (min-width: 600px) {
+      .metaphor-box {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .item-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.85em;
+      margin-bottom: 8px;
+    }
+    .badge-blue { background: #DBEAFE; color: #1E40AF; }
+    .badge-green { background: #DCFCE7; color: #166534; }
+    .badge-yellow { background: #FEF3C7; color: #92400E; }
+    .badge-red { background: #FEE2E2; color: #991B1B; }
+
+    /* 大步驟編號卡片 */
+    .step-card {
+      position: relative;
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px 22px 20px 22px;
+      margin-top: 30px;
+      margin-bottom: 30px;
+    }
+
+    .step-card.active-step {
+      border-color: var(--accent);
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent);
+      color: #FFFFFF;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      font-size: 22px;
+      font-weight: 900;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .step-title {
+      font-size: 1.3em;
+      font-weight: 800;
+    }
+
+    /* 程式碼與指令框 */
+    .code-wrapper {
+      position: relative;
+      margin: 14px 0 18px 0;
+    }
+
+    pre {
+      background: #20242B;
+      color: #F8FAFC;
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: auto;
+      border: 2px solid #334155;
+      letter-spacing: 0;
+      word-spacing: normal;
+    }
+
+    code {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      background: rgba(0,0,0,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: #D946EF;
+    }
+
+    pre code {
+      background: transparent;
+      color: #F8FAFC;
+      padding: 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #3B82F6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: #1D4ED8;
+    }
+
+    .copy-btn.copied {
+      background: #10B981;
+    }
+
+    /* 朗讀單元控制按鈕 */
+    .read-aloud-btn {
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .read-aloud-btn:hover {
+      background: var(--accent);
+      color: #FFFFFF;
+    }
+
+    /* 互動式檢查清單 */
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      background: var(--bg-color);
+      border: 2px solid var(--card-border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .checklist-item:hover {
+      border-color: var(--accent);
+    }
+
+    .checklist-item input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .checklist-item.done {
+      background: rgba(34, 197, 94, 0.08);
+      border-color: var(--success);
+      text-decoration: line-through;
+      opacity: 0.75;
+    }
+
+    /* 純 CSS 直觀圖解 */
+    .flow-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card-bg);
+      border: 2px dashed var(--accent);
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .flow-arrow {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    /* 浮動大字提示 */
+    .tip-tag {
+      display: inline-block;
+      background: #FEF08A;
+      color: #854D0E;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      margin-right: 6px;
+    }
+
+    /* 列印友善 */
+    @media print {
+      .a11y-toolbar, #reading-ruler, .copy-btn, .read-aloud-btn {
+        display: none !important;
+      }
+      body {
+        background: #FFFFFF;
+        color: #000000;
+        font-size: 14pt;
+        line-height: 1.6;
+      }
+      .card, .step-card {
+        border: 1px solid #999;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 閱讀輔助尺規 (鼠標跟隨黃色輔助高亮條) -->
+  <div id="reading-ruler" aria-hidden="true"></div>
+
+  <div class="container">
+
+    <!-- 頂部無障礙友善工具列 -->
+    <header class="a11y-toolbar" role="region" aria-label="閱讀輔助工具">
+      <div class="toolbar-group">
+        <span class="toolbar-title">👀 閱讀輔助：</span>
+        <button class="tool-btn" id="btn-toggle-ruler" title="開啟或關閉滑鼠輔助高亮尺規">
+          📏 開啟輔助尺
+        </button>
+        <button class="tool-btn" id="btn-read-page" title="朗讀整篇文章內容">
+          🔊 朗讀全文
+        </button>
+        <button class="tool-btn" id="btn-stop-speech" style="display:none;" title="停止朗讀">
+          ⏹️ 停止朗讀
+        </button>
+      </div>
+
+      <div class="toolbar-group">
+        <span class="toolbar-title">🎨 底色：</span>
+        <button class="tool-btn active" id="btn-theme-default">護眼暖白</button>
+        <button class="tool-btn" id="btn-theme-cream">柔和米黃</button>
+        <button class="tool-btn" id="btn-theme-blue">放鬆淺藍</button>
+        <button class="tool-btn" id="btn-theme-dark">舒適夜間</button>
+      </div>
+
+      <div class="toolbar-group">
+        <span class="toolbar-title">🔠 字體大小：</span>
+        <button class="tool-btn active" id="btn-font-normal">標準</button>
+        <button class="tool-btn" id="btn-font-large">特大 (推薦)</button>
+        <button class="tool-btn" id="btn-font-huge">超大</button>
+      </div>
+    </header>
+
+    <!-- 主標題區 -->
+    <main>
+      <section>
+        <h1>新手小白也能懂：網站備份與還原教學</h1>
+        <p>
+          你好！這份教學是專門為<strong>第一次接觸網站管理的朋友</strong>，以及<strong>容易看字跳行或眼花的朋友</strong>設計的。
+        </p>
+        <p>
+          我們<strong>不用複雜的黑話</strong>，也不用背難記的公式。跟著一步一步做，你也能隨時保護你的網站資料，遇到任何突發狀況都能在 3 分鐘內復原！
+        </p>
+      </section>
+
+      <!-- 快速總結卡片 -->
+      <section class="card success">
+        <div class="step-header">
+          <span class="step-number">★</span>
+          <span class="step-title">30 秒先看結論：備份到底在備份什麼？</span>
+          <button class="read-aloud-btn" onclick="readSection(this)">🔊 讀給我聽</button>
+        </div>
+        <p>
+          把你的網站想像成一間<strong>實體雜貨店</strong>：
+        </p>
+        <ul>
+          <li><strong>不需要天天備份的：店面設計圖（程式碼）</strong>。<br>只要你的程式碼有存在 GitHub / 雲端倉庫，就不用擔心，隨時可以重新蓋好。</li>
+          <li><strong>真正必須定時備份的：網站「三寶」</strong>。<br>如果這三樣東西丟了，商品和客人的紀錄就真的找不回來了！</li>
+        </ul>
+      </section>
+
+      <!-- 第一章：核心概念 -->
+      <section>
+        <h2>第一章：必須備份的「網站三寶」是哪三樣？</h2>
+        <div class="metaphor-box">
+
+          <div class="card">
+            <span class="item-badge badge-blue">第一寶：商品帳本</span>
+            <h3>1. SQLite 資料庫檔案</h3>
+            <p><strong>檔案位置：</strong><code>server/data/shop.db</code></p>
+            <p><strong>白話說明：</strong>這是店裡的<strong>「進銷存總帳本」</strong>。裡面記著：有哪些商品、商品多少錢、分成哪些類別、還有多少客人來逛過。如果帳本沒了，店就等於要重新開張。</p>
+          </div>
+
+          <div class="card">
+            <span class="item-badge badge-green">第二寶：實體相簿</span>
+            <h3>2. 上傳的商品圖片目錄</h3>
+            <p><strong>檔案位置：</strong><code>server/data/uploads/</code></p>
+            <p><strong>白話說明：</strong>這是你上架商品時拍的<strong>「照片櫃」</strong>。帳本裡雖然記錄了商品名稱，但實體照片都存放在這個資料夾裡。沒備份的話，所有商品圖片都會變成破圖裂掉。</p>
+          </div>
+
+          <div class="card">
+            <span class="item-badge badge-yellow">第三寶：店面密碼鑰匙</span>
+            <h3>3. 秘密設定檔 (.env)</h3>
+            <p><strong>檔案位置：</strong><code>server/.env</code></p>
+            <p><strong>白話說明：</strong>這是進後台的<strong>「通行證密碼」</strong>與安全防偽暗號。裡面寫著管理員密碼和保護金鑰。</p>
+          </div>
+
+          <div class="card">
+            <span class="item-badge badge-red">安心提醒：不用備份的部分</span>
+            <h3>React 與 Express 程式碼</h3>
+            <p><strong>位置：</strong><code>client/</code> 與 <code>server/src/</code></p>
+            <p><strong>白話說明：</strong>這些就像雜貨店的<strong>「鋼筋與水泥」</strong>，平常寫程式只要有用 Git 存到 GitHub，全世界都有副本，不用花空間每天備份。</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 第二章：如何手動備份 -->
+      <section>
+        <h2>第二章：如何備份？（超簡單兩步驟）</h2>
+        <p>請根據你的使用環境，選擇「方式 A（本機電腦）」或「方式 B（雲端 VPS 伺服器）」：</p>
+
+        <!-- 方式 A -->
+        <article class="step-card active-step">
+          <div class="step-header">
+            <span class="step-number">A</span>
+            <div>
+              <span class="step-title">方式 A：我在自己的 Windows / Mac 電腦上開發</span>
+              <p style="margin: 4px 0 0 0; font-size: 0.9em; opacity: 0.85;">最直覺、用滑鼠點點複製貼上就能搞定！</p>
+            </div>
+            <button class="read-aloud-btn" onclick="readSection(this)">🔊 讀給我聽</button>
+          </div>
+
+          <p><span class="tip-tag">動作 1</span> <strong>關閉正在運行的終端機（Ctrl + C）</strong>：確保資料庫沒有正在寫入資料。</p>
+          <p><span class="tip-tag">動作 2</span> <strong>找到資料夾並複製</strong>：</p>
+          <ol style="margin-left: 24px; margin-bottom: 16px;">
+            <li>打開專案中的 <code>server</code> 資料夾。</li>
+            <li>找到名為 <code>data</code> 的資料夾（裡面裝有 shop.db 和 uploads 照片）。</li>
+            <li>按滑鼠右鍵點 <strong>複製</strong>。</li>
+            <li>在桌面或外接硬碟建立一個名為 <code>myshop_備份_日期</code> 的資料夾，按右鍵 <strong>貼上</strong>。</li>
+            <li>別忘了把 <code>server/.env</code>（如果有的話）也複製過去放一起！</li>
+          </ol>
+          <p>恭喜你！這樣就備份完成了，就是這麼純樸簡單！</p>
+        </article>
+
+        <!-- 方式 B -->
+        <article class="step-card">
+          <div class="step-header">
+            <span class="step-number">B</span>
+            <div>
+              <span class="step-title">方式 B：雲端伺服器 (Linux / Docker) 一鍵備份</span>
+              <p style="margin: 4px 0 0 0; font-size: 0.9em; opacity: 0.85;">直接複製底下指令，貼進終端機按 Enter 就完成！</p>
+            </div>
+            <button class="read-aloud-btn" onclick="readSection(this)">🔊 讀給我聽</button>
+          </div>
+
+          <p>
+            <strong>為什麼雲端不能直接複製 shop.db？</strong><br>
+            因為我們的 SQLite 資料庫開啟了「高效率寫入模式（WAL 模式）」，直接複製可能只抄到一半。我們用系統專屬的 <code>.backup</code> 功能，就像按相機快門一樣，拍出最乾淨無損的快照！
+          </p>
+
+          <p><strong>請複製以下整段指令（點擊右上角藍色按鈕）：</strong></p>
+
+          <div class="code-wrapper">
+            <button class="copy-btn" onclick="copyCode(this)">點擊一鍵複製</button>
+            <pre><code># 步驟 1：建立放備份的保險箱目錄
+mkdir -p ~/backups
+
+# 步驟 2：拍下資料庫快照，並把照片和資料打包成壓縮檔
+cd ~/myshop/server
+sqlite3 data/shop.db ".backup 'data/shop_temp.db'"
+tar -czvf ~/backups/myshop_backup_$(date +%Y%m%d_%H%M%S).tar.gz \
+  data/shop_temp.db \
+  data/uploads \
+  .env 2>/dev/null || true
+rm -f data/shop_temp.db
+
+# 步驟 3：查看打包好的檔案（確認檔案大小不是 0）
+ls -lh ~/backups</code></pre>
+          </div>
+
+          <div class="card success" style="margin-top: 14px;">
+            <p><strong>💡 打包完成後會看到什麼？</strong></p>
+            <p>在 <code>~/backups</code> 目錄下，會出現一個類似 <code>myshop_backup_20261011_120000.tar.gz</code> 的壓縮包。這個小檔案就是你的全部心血，妥善保管它！</p>
+          </div>
+        </article>
+      </section>
+
+      <!-- 第三章：如何還原備份 -->
+      <section>
+        <h2>第三章：網站壞掉了！如何用備份檔快速還原？</h2>
+        <p>
+          如果哪天網站商品被不小心刪光了，或者伺服器當機資料毀損，請放輕鬆，拿出你的備份檔案，照著<strong>「黃金三步法」</strong>來復原：
+        </p>
+
+        <!-- 還原流程圖解 -->
+        <div class="flow-diagram">
+          <div class="flow-step">
+            <span style="font-size: 28px;">🛑</span>
+            <span>第一步：先停止運行網站（讓系統暫停寫入）</span>
+          </div>
+          <div class="flow-arrow">⬇️</div>
+          <div class="flow-step">
+            <span style="font-size: 28px;">📦</span>
+            <span>第二步：把備份檔案放回正確目錄（覆蓋損壞的舊檔）</span>
+          </div>
+          <div class="flow-arrow">⬇️</div>
+          <div class="flow-step">
+            <span style="font-size: 28px;">🚀</span>
+            <span>第三步：重新啟動網站並在瀏覽器檢查商品</span>
+          </div>
+        </div>
+
+        <!-- 還原詳細操作 -->
+        <div class="step-card">
+          <div class="step-header">
+            <span class="step-number">1</span>
+            <span class="step-title">詳細還原步驟教學（伺服器操作）</span>
+            <button class="read-aloud-btn" onclick="readSection(this)">🔊 讀給我聽</button>
+          </div>
+
+          <p><strong>步驟 1.1：先停止網站伺服器</strong></p>
+          <p>如果是使用 pm2 或 systemd 管理，先暫停它（避免在換資料庫時還有客人下單）：</p>
+          <div class="code-wrapper">
+            <button class="copy-btn" onclick="copyCode(this)">點擊複製</button>
+            <pre><code># 若使用 pm2：
+pm2 stop myshop-server
+
+# 若使用 Docker Compose：
+docker compose down</code></pre>
+          </div>
+
+          <p><strong>步驟 1.2：把備份檔案解壓縮還原</strong></p>
+          <p>請將 <code>檔名</code> 換成你當初備份出來的真實檔名（例如 <code>myshop_backup_20261011.tar.gz</code>）：</p>
+          <div class="code-wrapper">
+            <button class="copy-btn" onclick="copyCode(this)">點擊複製</button>
+            <pre><code># 切換到後端目錄
+cd ~/myshop/server
+
+# 解壓縮備份檔案到目前目錄
+tar -xzvf ~/backups/你的備份檔案名稱.tar.gz
+
+# 把暫存的資料庫檔名改回正式的 shop.db
+mv data/shop_temp.db data/shop.db
+
+# 刪除舊的臨時暫存快取（重要！避免新舊資料衝突）
+rm -f data/shop.db-wal data/shop.db-shm</code></pre>
+          </div>
+
+          <p><strong>步驟 1.3：重新啟動網站並打開網頁</strong></p>
+          <div class="code-wrapper">
+            <button class="copy-btn" onclick="copyCode(this)">點擊複製</button>
+            <pre><code># 若使用 pm2：
+pm2 start myshop-server
+
+# 若使用 Docker Compose：
+docker compose up -d
+
+# 檢查後端是否正常在 port 3001 呼吸（回傳 200 即代表健康）
+curl -I http://localhost:3001/api/health</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 第四章：避坑指南與檢查清單 -->
+      <section>
+        <h2>第四章：新手常見的三大翻車陷阱</h2>
+
+        <div class="card danger">
+          <h3>陷阱 1：千萬不要在網站跑動中，只複製單一個 shop.db</h3>
+          <p>
+            <strong>為什麼？</strong><br>
+            SQLite 有一個「幫手記錄本」叫做 <code>shop.db-wal</code>。很多最新的修改其實暫時寫在這個幫手本子裡。如果你只複製了 <code>shop.db</code>，最新的商品可能會漏掉！<br>
+            <strong>正確做法：</strong>一定要用 <code>sqlite3 shop.db ".backup"</code> 指令，或者<strong>先把伺服器關閉（停機）</strong>再做整包複製。
+          </p>
+        </div>
+
+        <div class="card warning">
+          <h3>陷阱 2：還原之後，為什麼前台照片都破圖了？</h3>
+          <p>
+            <strong>原因：</strong>因為你只還原了資料庫（帳本），卻忘記把 <code>uploads/</code> 相簿資料夾放回去！<br>
+            <strong>解法：</strong>檢查 <code>server/data/uploads/</code> 裡面有沒有一堆圖片檔案（.png 或 .jpg）。
+          </p>
+        </div>
+
+        <div class="card warning">
+          <h3>陷阱 3：備份檔案全部堆在伺服器硬碟，伺服器燒掉一起陪葬</h3>
+          <p>
+            <strong>白話忠告：</strong>雞蛋不能放在同一個籃子裡！<br>
+            備份打包好後，建議用 FTP 軟體（例如 FileZilla）或是雲端同步工具，把 <code>.tar.gz</code> 檔案<strong>下載一份回到你的筆電或 Google 雲端硬碟</strong>。
+          </p>
+        </div>
+      </section>
+
+      <!-- 互動式檢查清單 -->
+      <section class="card" style="border: 3px solid var(--success);">
+        <div class="step-header">
+          <span class="step-number" style="background: var(--success);">✔</span>
+          <span class="step-title">備份與還原自我驗收清單（可點擊打勾）</span>
+          <button class="read-aloud-btn" onclick="readSection(this)">🔊 讀給我聽</button>
+        </div>
+        <p>每次操作完畢後，可以在瀏覽器裡直接點選打勾，確認自己有沒有遺漏任何步驟：</p>
+
+        <ul class="checklist">
+          <li class="checklist-item">
+            <input type="checkbox" id="check-1">
+            <label for="check-1">我已經停止了伺服器，或者使用了 SQLite 專用快照指令</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="check-2">
+            <label for="check-2">我確認壓縮檔裡有包含：shop.db 資料庫</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="check-3">
+            <label for="check-3">我確認壓縮檔裡有包含：uploads 照片資料夾</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="check-4">
+            <label for="check-4">我確認壓縮檔裡有包含：.env 密碼設定檔</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="check-5">
+            <label for="check-5">壓縮檔大小不是 0 KB，有下載一份到自己的本機電腦保管</label>
+          </li>
+          <li class="checklist-item">
+            <input type="checkbox" id="check-6">
+            <label for="check-6">還原後打開前台首頁，商品名稱與商品圖片都能正常看見</label>
+          </li>
+        </ul>
+      </section>
+
+    </main>
+
+    <footer style="margin-top: 60px; padding-top: 20px; border-top: 2px dashed var(--card-border); text-align: center; font-size: 0.9em; opacity: 0.8;">
+      <p>MyShop 電商系統 · 新手友善與無障礙備份指南 · 保證資料萬無一失</p>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript 輔助功能：尺規跟隨、朗讀、主題與字體切換、一鍵複製 -->
+  <script>
+    // 1. 閱讀輔助尺規功能 (Reading Ruler)
+    const ruler = document.getElementById('reading-ruler');
+    const btnToggleRuler = document.getElementById('btn-toggle-ruler');
+    let isRulerActive = false;
+
+    btnToggleRuler.addEventListener('click', () => {
+      isRulerActive = !isRulerActive;
+      if (isRulerActive) {
+        ruler.style.display = 'block';
+        btnToggleRuler.classList.add('active');
+        btnToggleRuler.innerHTML = '📏 關閉輔助尺';
+      } else {
+        ruler.style.display = 'none';
+        btnToggleRuler.classList.remove('active');
+        btnToggleRuler.innerHTML = '📏 開啟輔助尺';
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isRulerActive) {
+        ruler.style.top = e.clientY + 'px';
+      }
+    });
+
+    // 2. 主題底色切換
+    const themes = {
+      'btn-theme-default': '',
+      'btn-theme-cream': 'theme-cream',
+      'btn-theme-blue': 'theme-softblue',
+      'btn-theme-dark': 'theme-dark'
+    };
+
+    Object.keys(themes).forEach(btnId => {
+      document.getElementById(btnId).addEventListener('click', (e) => {
+        document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim();
+        if (themes[btnId]) {
+          document.body.classList.add(themes[btnId]);
+        }
+        document.querySelectorAll('.toolbar-group button[id^="btn-theme-"]').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
+
+    // 3. 字體大小切換
+    const fontSizes = {
+      'btn-font-normal': '',
+      'btn-font-large': 'font-large',
+      'btn-font-huge': 'font-huge'
+    };
+
+    Object.keys(fontSizes).forEach(btnId => {
+      document.getElementById(btnId).addEventListener('click', (e) => {
+        document.body.className = document.body.className.replace(/\bfont-\S+/g, '').trim();
+        if (fontSizes[btnId]) {
+          document.body.classList.add(fontSizes[btnId]);
+        }
+        document.querySelectorAll('.toolbar-group button[id^="btn-font-"]').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
+
+    // 4. 一鍵複製指令
+    function copyCode(btn) {
+      const codeBlock = btn.nextElementSibling.querySelector('code');
+      const textToCopy = codeBlock.innerText;
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = '✅ 複製成功！';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        alert('請手動選取並複製指令');
+      });
+    }
+
+    // 5. 互動式勾選清單連動
+    document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(checkbox => {
+      checkbox.addEventListener('change', (e) => {
+        const item = e.target.closest('.checklist-item');
+        if (e.target.checked) {
+          item.classList.add('done');
+        } else {
+          item.classList.remove('done');
+        }
+      });
+    });
+
+    // 6. 語音朗讀輔助 (Web Speech API)
+    const synth = window.speechSynthesis;
+    const btnReadPage = document.getElementById('btn-read-page');
+    const btnStopSpeech = document.getElementById('btn-stop-speech');
+
+    function speakText(text) {
+      if (!synth) {
+        alert('抱歉，您的瀏覽器不支援內建語音朗讀功能');
+        return;
+      }
+      synth.cancel(); // 先清空前次發音
+      const utterThis = new SpeechSynthesisUtterance(text);
+      utterThis.lang = 'zh-TW';
+      utterThis.rate = 0.95; // 稍微放慢語速，方便閱讀障礙者理解
+
+      btnStopSpeech.style.display = 'inline-flex';
+      utterThis.onend = () => {
+        btnStopSpeech.style.display = 'none';
+      };
+      synth.speak(utterThis);
+    }
+
+    btnReadPage.addEventListener('click', () => {
+      const mainText = document.querySelector('main').innerText;
+      speakText(mainText);
+    });
+
+    btnStopSpeech.addEventListener('click', () => {
+      if (synth) {
+        synth.cancel();
+        btnStopSpeech.style.display = 'none';
+      }
+    });
+
+    function readSection(btn) {
+      const section = btn.closest('section') || btn.closest('.step-card') || btn.closest('.card');
+      if (section) {
+        // 排除掉按鈕自身的文字
+        const clone = section.cloneNode(true);
+        clone.querySelectorAll('button, pre').forEach(el => el.remove());
+        speakText(clone.innerText);
+      }
+    }
+  </script>
+</body>
+</html>
