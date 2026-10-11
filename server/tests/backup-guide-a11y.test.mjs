@@ -39,8 +39,11 @@ test("文檔包含網站三寶與備份還原之白話步驟與指令", () => {
   assert.match(content, /uploads/, "必須說明商品圖片資料夾位置");
   assert.match(content, /\.env/, "必須說明設定檔位置");
 
-  // 還原流程
+  // 還原流程與容錯指引
   assert.match(content, /sqlite3/, "需提供 sqlite3 快照指令避免 WAL 髒讀");
+  assert.match(content, /command not found: sqlite3/, "需涵蓋 sqlite3 缺失時的救急排查說明");
+  assert.match(content, /apt install/, "需提供 sqlite3 一鍵安裝指令");
+  assert.match(content, /免安裝/, "需提供零外部依賴之免安裝打包替代方案");
   assert.match(content, /黃金三步/, "需提供直觀清晰之步驟指引");
   assert.match(content, /copyCode/, "需提供一鍵複製指令按鈕");
   assert.match(content, /checklist-item/, "需提供自我驗收勾選清單");

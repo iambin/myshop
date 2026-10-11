@@ -600,15 +600,62 @@
           <div class="step-header">
             <span class="step-number">B</span>
             <div>
-              <span class="step-title">方式 B：雲端伺服器 (Linux / Docker) 一鍵備份</span>
+              <span class="step-title">方式 B：雲端伺服器 (Linux / VPS) 一鍵備份</span>
               <p style="margin: 4px 0 0 0; font-size: 0.9em; opacity: 0.85;">直接複製底下指令，貼進終端機按 Enter 就完成！</p>
             </div>
             <button class="read-aloud-btn" onclick="readSection(this)">🔊 讀給我聽</button>
           </div>
 
+          <!-- 出現 command not found 的新手求救箱 -->
+          <div class="card warning" style="margin-top: 10px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 24px;">🚨</span>
+              <strong style="font-size: 1.05em; background: transparent; padding: 0;">如果終端機出現「command not found: sqlite3」怎麼辦？</strong>
+            </div>
+            <p style="margin-top: 8px; margin-bottom: 8px;">
+              這代表你的伺服器（或 Mac）剛買來，還沒安裝 <code>sqlite3</code> 命令列工具。<strong>你有以下兩種超簡單解法（選其中一種即可）：</strong>
+            </p>
+            <ul style="margin-left: 24px; margin-bottom: 8px;">
+              <li>
+                <strong>解法 1（花 5 秒安裝工具）：</strong>
+                複製下方安裝指令貼上並按 Enter：
+                <div class="code-wrapper" style="margin: 8px 0;">
+                  <button class="copy-btn" onclick="copyCode(this)">複製安裝指令</button>
+                  <pre><code># Ubuntu / Debian 伺服器：
+sudo apt update && sudo apt install -y sqlite3
+
+# Mac 電腦 (若使用 Homebrew)：
+brew install sqlite</code></pre>
+                </div>
+              </li>
+              <li>
+                <strong>解法 2（免裝任何工具！停機 3 秒直接打包法）：</strong>
+                如果不想安裝工具，先讓伺服器暫停 3 秒，直接整包打包，完全不受 WAL 模式影響：
+                <div class="code-wrapper" style="margin: 8px 0;">
+                  <button class="copy-btn" onclick="copyCode(this)">複製免安裝打包指令</button>
+                  <pre><code># 1. 建立備份資料夾
+mkdir -p ~/backups
+
+# 2. 暫停伺服器（確保資料不寫入）
+pm2 stop myshop-server 2>/dev/null || true
+
+# 3. 直接打包整個 data 目錄與設定檔
+cd ~/myshop/server
+tar -czvf ~/backups/myshop_backup_$(date +%Y%m%d_%H%M%S).tar.gz data .env 2>/dev/null || true
+
+# 4. 重新啟動伺服器
+pm2 start myshop-server 2>/dev/null || true
+
+# 5. 查看備份成果
+ls -lh ~/backups</code></pre>
+                </div>
+              </li>
+            </ul>
+          </div>
+
           <p>
-            <strong>為什麼雲端不能直接複製 shop.db？</strong><br>
-            因為我們的 SQLite 資料庫開啟了「高效率寫入模式（WAL 模式）」，直接複製可能只抄到一半。我們用系統專屬的 <code>.backup</code> 功能，就像按相機快門一樣，拍出最乾淨無損的快照！
+            <strong>標準熱備份法（已安裝 sqlite3 時）：</strong><br>
+            系統專屬的 <code>.backup</code> 功能就像按相機快門一樣，在伺服器不停機的狀態下，拍出最乾淨無損的資料庫快照：
           </p>
 
           <p><strong>請複製以下整段指令（點擊右上角藍色按鈕）：</strong></p>
@@ -630,6 +677,24 @@ rm -f data/shop_temp.db
 # 步驟 3：查看打包好的檔案（確認檔案大小不是 0）
 ls -lh ~/backups</code></pre>
           </div>
+
+          <!-- Docker 部署環境補充 -->
+          <details class="card" style="margin-top: 14px; cursor: pointer;">
+            <summary><strong>🐳 如果你是用 Docker Compose 部署的？點此展開專屬指令</strong></summary>
+            <p style="margin-top: 10px;">如果你的專案是在 Docker 容器中跑，宿主機本身不用安裝 sqlite3，可以直接透過 Docker 臨時容器進行備份：</p>
+            <div class="code-wrapper">
+              <button class="copy-btn" onclick="copyCode(this)">複製 Docker 備份指令</button>
+              <pre><code>mkdir -p ~/backups
+docker run --rm \
+  -v myshop_server-data:/data:ro \
+  -v ~/backups:/backup \
+  alpine sh -c '
+    apk add --no-cache sqlite &&
+    sqlite3 /data/shop.db ".backup /backup/shop.db.bak" &&
+    tar -czf /backup/myshop_docker_$(date +%Y%m%d_%H%M%S).tar.gz /backup/shop.db.bak /data/uploads/ &&
+    rm -f /backup/shop.db.bak'</code></pre>
+            </div>
+          </details>
 
           <div class="card success" style="margin-top: 14px;">
             <p><strong>💡 打包完成後會看到什麼？</strong></p>
@@ -692,8 +757,8 @@ cd ~/myshop/server
 # 解壓縮備份檔案到目前目錄
 tar -xzvf ~/backups/你的備份檔案名稱.tar.gz
 
-# 把暫存的資料庫檔名改回正式的 shop.db
-mv data/shop_temp.db data/shop.db
+# 如果備份檔裡有名為 shop_temp.db 的快照檔，將其轉正為 shop.db
+[ -f data/shop_temp.db ] && mv -f data/shop_temp.db data/shop.db || true
 
 # 刪除舊的臨時暫存快取（重要！避免新舊資料衝突）
 rm -f data/shop.db-wal data/shop.db-shm</code></pre>
@@ -716,10 +781,19 @@ curl -I http://localhost:3001/api/health</code></pre>
 
       <!-- 第四章：避坑指南與檢查清單 -->
       <section>
-        <h2>第四章：新手常見的三大翻車陷阱</h2>
+        <h2>第四章：新手常見的四大翻車陷阱</h2>
+
+        <div class="card warning">
+          <h3>陷阱 1：終端機出現「command not found: sqlite3」</h3>
+          <p>
+            <strong>原因：</strong>這代表主機作業系統（Ubuntu / Debian / Mac）沒有內建 SQLite 的命令行工具。<br>
+            <strong>最快解法 A：</strong>只要跑這行就能裝好：<code>sudo apt update && sudo apt install -y sqlite3</code><br>
+            <strong>無腦解法 B（免裝工具）：</strong>直接採用「方式 B 解法 2」，先 <code>pm2 stop myshop-server</code> 停止 3 秒，直接整包 <code>tar</code> 打包，完全不需要任何額外軟體！
+          </p>
+        </div>
 
         <div class="card danger">
-          <h3>陷阱 1：千萬不要在網站跑動中，只複製單一個 shop.db</h3>
+          <h3>陷阱 2：千萬不要在網站跑動中，只複製單一個 shop.db</h3>
           <p>
             <strong>為什麼？</strong><br>
             SQLite 有一個「幫手記錄本」叫做 <code>shop.db-wal</code>。很多最新的修改其實暫時寫在這個幫手本子裡。如果你只複製了 <code>shop.db</code>，最新的商品可能會漏掉！<br>
@@ -728,7 +802,7 @@ curl -I http://localhost:3001/api/health</code></pre>
         </div>
 
         <div class="card warning">
-          <h3>陷阱 2：還原之後，為什麼前台照片都破圖了？</h3>
+          <h3>陷阱 3：還原之後，為什麼前台照片都破圖了？</h3>
           <p>
             <strong>原因：</strong>因為你只還原了資料庫（帳本），卻忘記把 <code>uploads/</code> 相簿資料夾放回去！<br>
             <strong>解法：</strong>檢查 <code>server/data/uploads/</code> 裡面有沒有一堆圖片檔案（.png 或 .jpg）。
@@ -736,7 +810,7 @@ curl -I http://localhost:3001/api/health</code></pre>
         </div>
 
         <div class="card warning">
-          <h3>陷阱 3：備份檔案全部堆在伺服器硬碟，伺服器燒掉一起陪葬</h3>
+          <h3>陷阱 4：備份檔案全部堆在伺服器硬碟，伺服器燒掉一起陪葬</h3>
           <p>
             <strong>白話忠告：</strong>雞蛋不能放在同一個籃子裡！<br>
             備份打包好後，建議用 FTP 軟體（例如 FileZilla）或是雲端同步工具，把 <code>.tar.gz</code> 檔案<strong>下載一份回到你的筆電或 Google 雲端硬碟</strong>。
